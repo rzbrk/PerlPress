@@ -1,0 +1,1673 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+use feature qw{ switch };
+use Config::Simple;
+use Term::ReadKey;
+use IO::File;
+use String::Util qw(trim);
+use Encode;
+use File::Copy::Recursive qw(fcopy rcopy dircopy fmove rmove dirmove);
+use Regexp::Common qw(URI);
+use Term::ANSIColor;
+use Try::Tiny;
+
+use PerlPress::DBAcc;
+use PerlPress::Tools;
+use PerlPress::Compiler;
+
+# We need a configuration file. First, search in the current user's home
+# directory. If there is no .perlpress.conf, then try to find file
+# perlpress.conf in /etc.
+my $conf="";
+if (-r $ENV{'HOME'} . "/.perlpress.conf")
+{
+	$conf=$ENV{'HOME'} . "/.perlpress.conf";
+} elsif (-r "/etc/perlpress.conf")
+{
+	$conf="/etc/perlpress.conf";
+} else
+{
+	die "No configuration file found, neither in $ENV{'HOME'}, nor in /etc/\n";
+}
+
+# Initialize some other variables
+my $dbh;							# Database handler
+my $input="";						# User keyboard input
+my $conn=" ";						# Connection indicator
+my $cfg = new Config::Simple(syntax=>'ini');
+$cfg->read($conf) or die "Can't open the config file $conf\n";
+$ENV{'EDITOR'}=$cfg->param('system.editor') || "/usr/bin/nano";
+
+# The following while-loop is the PerlPress console
+version();
+while ()
+{ 
+	print color 'bold magenta';
+	print "PerlPress";
+	print color 'reset';
+	if (PerlPress::DBAcc::status_db({ dbh=>$dbh }))	{ $conn="*"; }
+	  else { $conn=" ";	}
+	
+	print " [", $conn, "] > ";
+	chomp ($input = <>);
+	
+	given($input)
+	{
+		# Basic commands
+		when(m/^\s*$/)
+		{ }
+		when(m/^\s*(version|ver|v)\s*$/i)
+		{ version(); }
+		when(m/^\s*(help|h|info)\s*$/i)
+		{ help(); }
+		when(m/^\s*(quit|q|bye|exit)\s*$/i)
+		{ quit({ dbh=>$dbh }); }
+		
+		# DB connect & disconnect
+		when(m/^\s*(open|o)\s*$/i)
+		{ $dbh=open_project({ dbh=>$dbh, conf=>$conf }); }
+		when(m/^\s*(open|o)\s+(?<proj>.*)\s*$/i)
+		{ $dbh=open_project({ dbh=>$dbh, conf=>$conf, proj=>$+{proj} }); }
+		when(m/^\s*(close|c)\s*$/i)
+		{ $dbh=close_project({ dbh=>$dbh }); }
+	
+		# Listing
+		when(m/^\s*(list|l)\s+(categories|cat)$/i)
+		{ list_cat({ dbh=>$dbh }); }
+		when(m/^\s*(list|l)\s+(tags|tag)$/i)
+		{ list_tag({ dbh=>$dbh }); }
+		when(m/^\s*(list|l)\s+(articles|art)$/i)
+		{ list_art({ dbh=>$dbh }); }
+		when(m/^\s*(list|l)\s+(shortcuts|short|shorts)$/i)
+		{ list_shorts({ dbh=>$dbh }); }
+		
+		# Editing
+		when(m/^\s*(edit|e)\s+(article|art)\s+(?<id>[0-9]+)\s*$/i)
+		{ edit_art({ dbh=>$dbh, art_id=>$+{id} }); }
+		when(m/^\s*(edit|e)\s+(category|cat)\s+(?<id>[0-9]+)\s*$/i)
+		{ edit_cat({ dbh=>$dbh, cat_id=>$+{id} }); }
+		when(m/^\s*(edit|e)\s+(tag)\s+(?<id>[0-9]+)\s*$/i)
+		{ edit_tag({ dbh=>$dbh, tag_id=>$+{id} }); }
+		when(m/^\s*(edit|e)\s+(shortcuts|short|shorts)\s+(?<id>[0-9]+)\s*$/i)
+		{ edit_short({ dbh=>$dbh, short_id=>$+{id} }); }
+		
+		# Creating
+		when(m/^\s*(new|n)\s+(article|art)\s*$/i)
+		{ new_art({ dbh=>$dbh }); }
+		when(m/^\s*(new|n)\s+(tag)\s*\"*(?<name>.*)\"*\s*$/i)
+		{ new_tag({ dbh=>$dbh, tag_name=>$+{name} }); }
+		when(m/^\s*(new|n)\s+(category|cat)\s*\"*(?<name>.*)\"*\s*$/i)
+		{ new_cat({ dbh=>$dbh, cat_name=>$+{name} }); }
+		when(m/^\s*(new|n)\s+(shortcuts|short|shorts)\s*\"*(?<descr>.*)\"*\s*$/i)
+		{ new_short({ dbh=>$dbh, short_descr=>$+{descr} }); }
+		
+		# Deleting
+		when(m/^\s*(remove|rm|r)\s+(category|cat)\s+(?<id>[0-9]+)\s*$/i)
+		{ rm_cat({ dbh=>$dbh, cat_id=>$+{id} }); }
+		when(m/^\s*(remove|rm|r)\s+(tag)\s+(?<id>[0-9]+)\s*$/i)
+		{ rm_tag({ dbh=>$dbh, tag_id=>$+{id} }); }
+		when(m/^\s*(remove|rm|r)\s+(article|art)\s+(?<id>[0-9]+)\s*$/i)
+		{ rm_art({ dbh=>$dbh, art_id=>$+{id} }); }
+		when(m/^\s*(remove|rm|r)\s+(shortcuts|short|shorts)\s+(?<id>[0-9]+)\s*$/i)
+		{ rm_short({ dbh=>$dbh, short_id=>$+{id} }); }
+		
+		# Compile
+		when(m/^\s*(make|m)\s*$/i)
+		{ make({ dbh=>$dbh, cfg=>$cfg }); }
+
+		# Unknown/erroneous command
+		default { unknown($input); }
+	}
+	#last if ($quit);
+}
+
+#print "Exiting PerlPress, bye!\n\n";
+
+########################################################################
+
+=head1 SUBROUTINES/METHODS
+
+=head2 version
+
+Print version information
+
+=cut
+
+sub version
+{
+	print "\n";
+	print color 'bold magenta';
+	print "  PerlPress\n";
+	print color 'reset';
+	print "  Version 0.1\n  Copyright (c) 2013 Jan Grosser\n\n";
+	print "  Type \"help\" for a list of available commands.\n\n";
+}
+
+=head2 help
+
+Print list of available commands.
+
+=cut
+
+sub help
+{
+	print "<insert help text here>\n";
+}
+
+=head2 unknown
+
+Print error message.
+
+=cut
+
+sub unknown
+{
+	my $input=shift;
+	print "Sorry, don't know what to do with \"$input\".\n";
+	print "Type \"help\" for a list of available commands.\n\n";
+}
+
+#=head2 conn
+
+#Ask for the credentials and connect to database. Return the database
+#handler
+
+#=cut
+
+#sub conn
+#{
+	## Get a reference to a hash containing the routine's arguments
+	#my ($arg_ref)=@_;
+  
+	## Check if all necessary arguments are present
+	#my $dbh=$arg_ref->{'dbh'};
+	#my $host=$arg_ref->{'host'} or die "conn: Specify host\n";
+	#my $usr=$arg_ref->{'db_user'} or die "conn: Specify database user\n";
+	#my $db=$arg_ref->{'database'} or die "conn: Specify database name\n";
+	#my $pwd=$arg_ref->{'pwd'} or die "conn: Specify database password\n";
+
+	#print "Connect to database . . .\n\n";
+
+	## Connect to database and get database handler
+	#print "Establish connection to db $db\@$host as user $usr . . . ";
+	#$dbh=PerlPress::DBAcc::connect_db({ host=>$host, db=>$db, usr=>$usr, pwd=>$pwd });
+	#print "DONE!\n\n" if (PerlPress::DBAcc::status_db({ dbh=>$dbh }));
+	
+	## Return database handler
+	#return $dbh;
+#}
+
+=head2 open_project
+
+Open a project. Performs the following tasks:
+
+1. Asks for the project name. This project name has to match a block
+   definition in the config file.
+2. Reads the parameters from the config file.
+3. Performs some checks on the completness and correctness of the
+   parameters.
+4. Asks for the database keyword.
+5. Opens the database.
+6. Sets environmental variables.
+7. Returns the database handler.
+
+=cut
+
+sub open_project
+{
+	# Get a reference to a hash containing the routine's arguments
+	my ($arg_ref)=@_;
+  
+	# Check if all necessary arguments are present
+	my $dbh=$arg_ref->{'dbh'};
+	my $conf=$arg_ref->{'conf'} or die "open_project: Specify a config file!\n";
+	my $proj_name=$arg_ref->{'proj'} || undef;
+	
+	# Check the connection status. If already connected then prompt
+	# to disconnect before establishing new connection
+	if (PerlPress::DBAcc::status_db({ dbh=>$dbh }))
+	{
+		print "There is already a database connection:\n";
+		print "(", $dbh->{'Name'}, ")\n";
+		print "Please disconnect with \"disconnect\" first.\n\n";
+		return $dbh;
+	}
+	
+	# Open the config file
+	my $cfg = new Config::Simple(syntax=>'ini');
+	$cfg->read($conf) or die "Can't open the config file $conf\n";
+	
+	# If the project name was not specified together with calling this
+	# routine, ask now for the project name. The name has to be
+	# identical (case sensitive!) to a block name in the config file.
+	if (! defined $proj_name)
+	{
+		print "Name of the project (case sensitive!): ";
+		chomp ($proj_name = <>);
+	}
+	
+	# Read the config parameters from the config file. If the project
+	# name is not found in the conbfig file, the hash ref is empty
+	my $proj_vars=$cfg->get_block($proj_name);
+	if (scalar(keys $proj_vars)==0)
+	{
+		print "Could not find project \"$proj_name\" in \"$conf\", aborting.\n";
+		return $dbh;
+	}
+	
+	# If host, user or db name for the database connection are not
+	# defined in the configuration file, then leave without doing
+	# anything
+	
+	if (   ((! defined $proj_vars->{'host'}) && $proj_vars->{'host'}=~/\s*/)
+	    && ((! defined $proj_vars->{'db_user'}) && $proj_vars->{'db_user'}=~/\s*/)
+	    && ((! defined $proj_vars->{'database'}) && $proj_vars->{'database'}=~/\s*/))
+	{
+		print "Could not find all necessary database parameter (host, db_user,\n";
+		print "database) in \"$conf\", aborting.\n";
+		return $dbh;
+	}
+	
+	# Check for the correctness and completness of some of the parameters
+	
+	# Source directory
+	my $src=$proj_vars->{'src_dir'} || "";
+	$src=PerlPress::Tools::repl_with_home($src);
+	if (! PerlPress::Tools::check_dir_exist_writable({ dir=>$src }))
+	{
+		print "Source directory \"$src\" not existing or not writable. Aborting.\n";
+		return $dbh;
+	}
+		
+	# Output directory
+	my $out=$proj_vars->{'out_dir'} || "";
+	$out=PerlPress::Tools::repl_with_home($out);
+	if (! PerlPress::Tools::check_dir_exist_writable({ dir=>$out }))
+	{
+		print "Output directory \"$out\" not existing or not writable. Aborting.\n";
+		return $dbh;
+	}
+
+	# Temp directory
+	my $tmp=$proj_vars->{'tmp_dir'} || "";
+	$tmp=PerlPress::Tools::repl_with_home($tmp);
+	if (! PerlPress::Tools::check_dir_exist_writable({ dir=>$tmp }))
+	{
+		print "Output temp \"$tmp\" not existing or not writable. Aborting.\n";
+	}
+
+	# HTML template file defined and existing?
+	my $templ=$proj_vars->{'html_template'} || "";
+	$templ=PerlPress::Tools::repl_with_home($templ);
+	if (! -r $templ)
+	{
+		print "HTML template file \"", $templ,
+		      "\" not defined or not existing. Aborting.\n\n";
+		return $dbh;
+	}
+		
+	# Ask for database password (no echo while keyboard input)
+	print "\n  Host: ", $proj_vars->{'host'}, "\n";
+	print "  Database: ", $proj_vars->{'database'}, "\n";
+	print "  User: ", $proj_vars->{'db_user'}, "\n\n";
+	print "  Enter the database password: ";
+	my $pwd="";
+	ReadMode ('noecho');
+	chomp ($pwd = <>);
+	ReadMode ('restore');
+	print "\n\n";
+	
+	# Connect to database and get database handler
+	print "Try to establish connection to db . . . ";
+	$dbh=PerlPress::DBAcc::connect_db({ host=>$proj_vars->{'host'},
+										db=>$proj_vars->{'database'},
+										usr=>$proj_vars->{'db_user'},
+										pwd=>$pwd });
+
+	# In case we have a valid db connection define the environmental
+	# variables
+	if (PerlPress::DBAcc::status_db({ dbh=>$dbh }))
+	{
+		print "done!\n\n";
+		$ENV{'SRC_DIR'}=$src;
+		$ENV{'OUT_DIR'}=$out;
+		$ENV{'TMP_DIR'}=$tmp;
+		$ENV{'AUTHOR'}=$proj_vars->{'author'} || "Jon Doe";
+		my $base_url=$proj_vars->{'base_url'} || "http://www.example.com";
+		$base_url=~s/\/$//; # Remove trailing / if exist
+		$ENV{'BASE_URL'}=$base_url;
+		$ENV{'TMPL'}=$templ;
+		$ENV{'ART_PER_PAGE'}=$proj_vars->{'art_per_page'} || 5;
+		$ENV{'MAX_LEN_LINK'}=$proj_vars->{'max_len_link'} || 30;
+		
+	} else
+	{
+		print "failed!\n\n";
+	}
+	
+	# Return database handler
+	return $dbh;
+}
+
+=head2 close_project
+
+Disconnects from database and clears the project dependent environmental
+variables.
+
+=cut
+
+sub close_project
+{
+	# Get a reference to a hash containing the routine's arguments
+	my ($arg_ref)=@_;
+  
+	# Check if all necessary arguments are present
+	my $dbh=$arg_ref->{'dbh'};
+
+	# Abort subroutine if there is no db connection (= no open project)
+	if (! PerlPress::DBAcc::status_db({ dbh=>$dbh }))
+	{
+		print "No open project, nothing to do.\n\n";
+		return $dbh;
+	}
+
+	my $input="";
+	print "Do you really want to close the project? [y/N]: ";
+	chomp ($input = <>);
+	if ($input=~/^y$/i)
+	{
+		print "  Disconnect from database . . . ";
+		PerlPress::DBAcc::disconnect_db({ dbh=>$dbh });
+		print "done!\n\n" if (! PerlPress::DBAcc::status_db({ dbh=>$dbh }));
+		$ENV{'SRC_DIR'}="";
+		$ENV{'OUT_DIR'}="";
+		$ENV{'TMP_DIR'}="";
+		$ENV{'AUTHOR'}="";
+		$ENV{'BASE_URL'}="";
+		$ENV{'TMPL'}="";
+		$ENV{'ART_PER_PAGE'}="";
+		$ENV{'MAX_LEN_LINK'}="";
+	} else
+	{
+		print "Okay, leaving everything untouched.\n\n";
+	}
+	
+	return $dbh;
+}
+
+=head2 quit
+
+Quit PerlPress. If connected, then disconnect first.
+
+=cut
+
+sub quit
+{
+	# Get a reference to a hash containing the routine's arguments
+	my ($arg_ref)=@_;
+  
+	# Check if all necessary arguments are present
+	my $dbh=$arg_ref->{'dbh'};
+	
+	# Ask user, if he really wants to quit
+	my $input="";
+	print "Do you really want to quit? [y/N]: ";
+	chomp ($input = <>);
+	if ($input=~/^y$/i)
+	{
+		# Ok, user really wants to quit.
+		# If connected to db, disconnect first
+		if (PerlPress::DBAcc::status_db({ dbh=>$dbh }))
+		{
+			PerlPress::DBAcc::disconnect_db({ dbh=>$dbh });
+		}
+		
+		# Say good-bye!
+		print "\n  Exiting PerlPress, bye!\n\n";
+		exit;
+	} else
+	{
+		return;
+	}
+}
+
+=head2 list_cat
+
+Print a list of categories
+
+=cut
+
+sub list_cat
+{
+	# Get a reference to a hash containing the routine's arguments
+	my ($arg_ref)=@_;
+  
+	# Check if all necessary arguments are present
+	my $dbh=$arg_ref->{'dbh'};
+
+	# Abort subroutine if there is no db connection
+	if (! PerlPress::DBAcc::status_db({ dbh=>$dbh }))
+	{
+		print "No database connection.\n";
+		print "Connect with \"connect\" first.\n\n";
+		return;
+	}
+
+	# Get the list of categories from the database
+	my $cat=PerlPress::DBAcc::get_cat_list({ dbh=>$dbh });
+
+	print "List of categories\n\n";
+
+	# Output as table ordered by cat id
+	print "    Cat ID | Category name\n";
+	print "  ", "-" x 60, "\n";
+	
+	my $c=""; # Helper
+	foreach my $cat_id (sort {$a <=> $b} keys $cat)
+	{
+		printf("  % 8d ", $cat_id);
+		print "| ";
+		$c=encode("utf-8", $cat->{$cat_id}->{cat_name});
+		if (length($c)>47)
+		{
+			$c=substr($c,0,43)."...";
+		}
+		print $c, "\n"
+	}
+	print "\n";
+}
+
+=head2 list_tag
+
+Print a list of tags
+
+=cut
+
+sub list_tag
+{
+	# Get a reference to a hash containing the routine's arguments
+	my ($arg_ref)=@_;
+  
+	# Check if all necessary arguments are present
+	my $dbh=$arg_ref->{'dbh'};
+
+	# Abort subroutine if there is no db connection
+	if (! PerlPress::DBAcc::status_db({ dbh=>$dbh }))
+	{
+		print "No database connection.\n";
+		print "Connect with \"connect\" first.\n\n";
+		return;
+	}
+
+	# Get the list of categories from the database
+	my $tags=PerlPress::DBAcc::get_tag_list({ dbh=>$dbh });
+
+	print "List of tags\n\n";
+
+	# Output as table ordered by cat id
+	print "    Tag ID | Tag\n";
+	print "  ", "-" x 60, "\n";
+	
+	my $t=""; # Helper
+	foreach my $tag_id (sort {$a <=> $b} keys $tags)
+	{
+		printf("  % 8d ", $tag_id);
+		print "| ";
+		$t=encode("utf-8", $tags->{$tag_id}->{tag_name});
+		if (length($t)>47)
+		{
+			$t=substr($t,0,43)."...";
+		}
+		print $t, "\n"
+	}
+	print "\n";
+}
+
+=head2 list_art
+
+Print a list of articles
+
+=cut
+
+sub list_art
+{
+	# Get a reference to a hash containing the routine's arguments
+	my ($arg_ref)=@_;
+  
+	# Check if all necessary arguments are present
+	my $dbh=$arg_ref->{'dbh'};
+
+	# Abort subroutine if there is no db connection
+	if (! PerlPress::DBAcc::status_db({ dbh=>$dbh }))
+	{
+		print "No database connection.\n";
+		print "Connect with \"connect\" first.\n\n";
+		return;
+	}
+	
+	# Get the list of articles from the database
+	my $art=PerlPress::DBAcc::get_art_list({ dbh=>$dbh });
+	
+	print "List of articles\n\n";
+	print "  T:    Type (B: blog, P: page, N: nav)\n";
+	print "  S:    Status (D: draft, P: published, U: unpublished)\n\n";
+
+	# Output as table ordered by cat id
+	print "    Art ID | T | S | Title\n";
+	print "  ", "-" x 60, "\n";
+	
+	my $t=""; # Helper
+	foreach my $art_id (sort {$a <=> $b} keys $art)
+	{
+		my $type=uc substr($art->{$art_id}->{'type'}, 0, 1);
+		my $status=uc substr($art->{$art_id}->{'status'}, 0, 1);
+		
+		my $color="reset";
+		$color="bright_blue" if ($type=~m/(P|N)/);
+		$color="bright_black" if ($status=~m/(D|U)/);
+		
+		printf("  % 8d ", $art_id);
+		print "| ";
+		print $type, " | ";
+		print $status, " | ";
+		$t=encode("utf-8", $art->{$art_id}->{'title'});
+		if (length($t)>39)
+		{
+			$t=substr($t,0,35)."...";
+		}
+		print color "$color";
+		print $t, "\n";
+		print color 'reset';
+		
+		# If type=NAV the add the link
+		if ($art->{$art_id}->{'type'}=~/nav/i)
+		{
+			print " "x19, "|  --> ";
+			print color "$color";
+			print $art->{$art_id}->{'link'}, "\n";
+			print color 'reset';
+		}
+	}
+	
+	print "\n";
+}
+
+=head2 list_shorts
+
+Print a list of the HTML shortcuts defined in the database.
+
+=cut
+
+sub list_shorts
+{
+	# Get a reference to a hash containing the routine's arguments
+	my ($arg_ref)=@_;
+  
+	# Check if all necessary arguments are present
+	my $dbh=$arg_ref->{'dbh'};
+
+	# Abort subroutine if there is no db connection
+	if (! PerlPress::DBAcc::status_db({ dbh=>$dbh }))
+	{
+		print "No database connection.\n";
+		print "Connect with \"connect\" first.\n\n";
+		return;
+	}
+
+	# Get the list of HTML shortcuts from the database as an array ref
+	# containing hash refs
+	my $shorts=PerlPress::DBAcc::get_shorts_list({ dbh=>$dbh });
+
+	print "List of HTML shortcuts\n\n";
+
+	foreach my $s (@{$shorts})
+	{
+		print "  * ID: ", $s->{'short_id'}, "\n",
+		      "    Name: \"", $s->{'descr'}, "\"\n",
+		      "    Find: \"", $s->{'find'}, "\"\n",
+		      "    Replace: \"", $s->{'repl'}, "\"\n",
+		      "    Enabled: ", $s->{'enabled'}, "\n\n";
+	}
+}
+
+=head2 new_art
+
+Create a new article in the database with default entries.
+
+=cut
+
+sub new_art
+{
+	# Get a reference to a hash containing the routine's arguments
+	my ($arg_ref)=@_;
+  
+	# Check if all necessary arguments are present
+	my $dbh=$arg_ref->{'dbh'};
+		
+	# Abort subroutine if there is no db connection
+	if (! PerlPress::DBAcc::status_db({ dbh=>$dbh }))
+	{
+		print "No database connection.\n";
+		print "Connect with \"connect\" first.\n\n";
+		return;
+	}
+	
+	# Ask if user really wants to create a new article
+	print "Do you want to create a new article? [y/N]: ";
+	chomp($input = <>);
+	if ($input =~ /^y$/i)
+	{
+		# Create new article in database and get its article id
+		my $art_id=PerlPress::DBAcc::new_art({ dbh=>$dbh });
+
+		# Now create the temporary file for editing
+		prep_art_file({ dbh=>$dbh, art_id=>$art_id });
+	}
+}
+
+=head2 new_short
+
+Create a new HTML shortcut in the database with default entries.
+
+=cut
+
+sub new_short
+{
+	# Get a reference to a hash containing the routine's arguments
+	my ($arg_ref)=@_;
+  
+	# Check if all necessary arguments are present
+	my $dbh=$arg_ref->{'dbh'};
+		
+	# Abort subroutine if there is no db connection
+	if (! PerlPress::DBAcc::status_db({ dbh=>$dbh }))
+	{
+		print "No database connection.\n";
+		print "Connect with \"connect\" first.\n\n";
+		return;
+	}
+	
+	# Ask if user really wants to create a new shortcut
+	print "Do you want to create a new shortcut? [y/N]: ";
+	chomp($input = <>);
+	if ($input =~ /^y$/i)
+	{
+		# Create new shortcut in database and get its shortcut id
+		my $short_id=PerlPress::DBAcc::new_short({ dbh=>$dbh });
+
+		# Now create the temporary file for editing
+		prep_short_file({ dbh=>$dbh, short_id=>$short_id });
+	}
+}
+
+
+=head2 new_cat
+
+Create a new category in the database.
+
+=cut
+
+sub new_cat
+{
+	# Get a reference to a hash containing the routine's arguments
+	my ($arg_ref)=@_;
+  
+	# Check if all necessary arguments are present
+	my $dbh=$arg_ref->{'dbh'};
+	my $cat_name=$arg_ref->{'cat_name'} || undef;
+	
+	# Abort subroutine if there is no db connection
+	if (! PerlPress::DBAcc::status_db({ dbh=>$dbh }))
+	{
+		print "No database connection.\n";
+		print "Connect with \"connect\" first.\n\n";
+		return;
+	}
+	
+	# Ask if user really wants to create a new category
+	print "Do you want to create a new category? [y/N]: ";
+	chomp($input = <>);
+	if ($input =~ /^y$/i)
+	{
+		# If no category name specified, ask for it
+		if (! defined $cat_name)
+		{
+			print "\nCategory name: ";
+			chomp($cat_name=<>);
+		}
+		# See if the category is already defined
+		my $cat_id=${PerlPress::DBAcc::get_cat_id({ dbh=>$dbh, cat_name=>[$cat_name] })}[0];
+		if ($cat_id!=-1)
+		{
+			# Category already exists
+			print "\nCategory \"", $cat_name, "\" already exists.\n\n";
+		} else
+		{
+			# Create the new category
+			$cat_id=PerlPress::DBAcc::new_cat({ dbh=>$dbh, cat_name=>$cat_name });
+			print "\nCategory created:\n  Name: ", $cat_name, "\n  ID: ", $cat_id, "\n\n";
+		}
+	}
+}
+
+=head2 new_cat
+
+Create a new category in the database.
+
+=cut
+
+sub new_tag
+{
+	# Get a reference to a hash containing the routine's arguments
+	my ($arg_ref)=@_;
+  
+	# Check if all necessary arguments are present
+	my $dbh=$arg_ref->{'dbh'};
+	my $tag_name=$arg_ref->{'tag_name'} || undef;
+	
+	# Abort subroutine if there is no db connection
+	if (! PerlPress::DBAcc::status_db({ dbh=>$dbh }))
+	{
+		print "No database connection.\n";
+		print "Connect with \"connect\" first.\n\n";
+		return;
+	}
+	
+	# Ask if user really wants to create a new tag
+	print "Do you want to create a new tag? [y/N]: ";
+	chomp($input = <>);
+	if ($input =~ /^y$/i)
+	{
+		# If no tag name specified, ask for it
+		if (! defined $tag_name)
+		{
+			print "\nTag name: ";
+			chomp($tag_name=<>);
+		}
+		# See if the tag is already defined
+		my $tag_id=${PerlPress::DBAcc::get_tag_id({ dbh=>$dbh, tag_name=>[$tag_name] })}[0];
+		if ($tag_id!=-1)
+		{
+			# Tag already exists
+			print "\nTag \"", $tag_name, "\" already exists.\n\n";
+		} else
+		{
+			# Create the new tag
+			$tag_id=PerlPress::DBAcc::new_tag({ dbh=>$dbh, tag_name=>$tag_name });
+			print "\nTag created:\n  Name: ", $tag_name, "\n  ID: ", $tag_id, "\n\n";
+		}
+	}
+}
+
+=head2 edit_art
+
+Edit an article from the database. If article does not exist, user will
+be asked to create a new one.
+
+=cut
+
+sub edit_art
+{
+	# Get a reference to a hash containing the routine's arguments
+	my ($arg_ref)=@_;
+  
+	# Check if all necessary arguments are present
+	my $dbh=$arg_ref->{'dbh'};
+	my $art_id=$arg_ref->{'art_id'} || -1;
+
+	# Abort subroutine if there is no db connection
+	if (! PerlPress::DBAcc::status_db({ dbh=>$dbh }))
+	{
+		print "No database connection.\n";
+		print "Connect with \"connect\" first.\n\n";
+		return;
+	}
+	
+	# Check if article with art_id is in database
+	if (! PerlPress::DBAcc::check_art_exist({ dbh=>$dbh, art_id=>$art_id }))
+	{
+		# No such art in db => set to bad article id
+		$art_id=-1;
+	}
+		
+	# Ask the user if he instead wants to create a new article
+	# Therefore call function new_art()
+	if ($art_id==-1)
+	{
+		print "Bad article id or article id not given.\n";
+		new_art({ dbh=>$dbh });
+		return;
+	}
+	
+	# Finally go ahead with creating the temporary file holding the
+	# article data for editing by the user.
+	# Therefore call function prep_art_file()
+	prep_art_file({ dbh=>$dbh, art_id=>$art_id });
+}
+
+=head2 prep_art_file
+
+Prepare a temporary file holding all the editable article data.
+Therefore load the article data from the database and print them in a
+specific format to the file.
+
+=cut
+
+sub prep_art_file
+{
+	# Encoding
+	my $enc="utf-8";
+	
+	# Get a reference to a hash containing the routine's arguments
+	my ($arg_ref)=@_;
+  
+	# Check if all necessary arguments are present
+	my $dbh=$arg_ref->{'dbh'} or die "prep_art_file: Specify database handler";
+	my $art_id=$arg_ref->{'art_id'} or die "prep_art_file: Specify article id";
+	
+	# Die if there is no db connection
+	die "prep_art_file: No database connection"
+	  if (! PerlPress::DBAcc::status_db({ dbh=>$dbh }));
+	
+	# Now create a temporary file in ../temp/, load the article data,
+	# save them to the file and finally open this file in an editor
+	my $file=$ENV{'TMP_DIR'}."/A".$art_id."_".PerlPress::Tools::now_dir().".txt";
+	my $fh=IO::File->new( ">$file" ) or die "Could not open file: $!";
+
+	# Load the article data
+	my $art=PerlPress::DBAcc::load_art_data({ dbh=>$dbh, art_id=>$art_id });
+
+	# Load the list of categories the article is linked to
+	my @art_cat_ids=@{PerlPress::DBAcc::get_art_cat_ids({ dbh=>$dbh, art_id=>$art_id })};
+	my @art_cat_names=@{PerlPress::DBAcc::get_cat_name({ dbh=>$dbh, cat_id=>\@art_cat_ids })};
+	
+	# Load the list of tags for the article
+	my @art_tag_ids=@{PerlPress::DBAcc::get_art_tag_ids({ dbh=>$dbh, art_id=>$art_id })};
+	my @art_tag_names=@{PerlPress::DBAcc::get_tag_name({ dbh=>$dbh, tag_id=>\@art_tag_ids })};
+
+    printfile({ fh=>$fh, str=>"=== ARTICLE INFORMATION ".("="x53)."\n\n" });
+	printfile({ fh=>$fh, str=>"Title=\"".$art->{'title'}."\"\n" });
+	printfile({ fh=>$fh, str=>"Subtitle=\"".$art->{'subtitle'}."\"\n" });
+	printfile({ fh=>$fh, str=>"Created=\"".$art->{'created'}."\"\n" });
+	printfile({ fh=>$fh, str=>"Modified=\"".PerlPress::Tools::now()."\"\n" });
+	printfile({ fh=>$fh, str=>"Author=\"".$art->{'author'}."\"\n" });
+	printfile({ fh=>$fh, str=>"Type=\"".$art->{'type'}."\"\n" });
+	printfile({ fh=>$fh, str=>"Link=\"".$art->{'link'}."\"\n" });
+	printfile({ fh=>$fh, str=>"Status=\"".$art->{'status'}."\"\n" });
+	printfile({ fh=>$fh, str=>"Categories=\"" });
+	printfile({ fh=>$fh, str=>join( ', ', @art_cat_names ) });
+	printfile({ fh=>$fh, str=>"\"\n" });
+	printfile({ fh=>$fh, str=>"Tags=\"" });
+	printfile({ fh=>$fh, str=>join( ', ', @art_tag_names ) });
+	printfile({ fh=>$fh, str=>"\"\n" });
+	printfile({ fh=>$fh, str=>"Featured=\"".$art->{'featured'}."\"\n" });
+	printfile({ fh=>$fh, str=>"\n" });
+	printfile({ fh=>$fh, str=>"=== INTRO TEXT ".("="x62)."\n" });
+	printfile({ fh=>$fh, str=>"\n".$art->{'intr_text'}."\n\n" });
+	printfile({ fh=>$fh, str=>"=== FULL TEXT ".("="x63)."\n" });
+	printfile({ fh=>$fh, str=>"\n".$art->{'full_text'}."\n\n" });
+	printfile({ fh=>$fh, str=>"=== NOTES ".("="x67)."\n" });
+	printfile({ fh=>$fh, str=>"\n".$art->{'notes'}."\n\n" });
+	printfile({ fh=>$fh, str=>"=== EOF ".("="x69) });
+	$fh->close;
+	
+	# Finally open the file for editing
+	# Therefore call the function edit_art_file()
+	edit_art_file({ dbh=>$dbh, file=>$file, art_id=>$art_id });
+}	
+
+=head2 prep_art_file
+
+Prepare a temporary file holding all the editable article data.
+Therefore load the article data from the database and print them in a
+specific format to the file.
+
+=cut
+
+sub prep_short_file
+{
+	# Encoding
+	my $enc="utf-8";
+	
+	# Get a reference to a hash containing the routine's arguments
+	my ($arg_ref)=@_;
+  
+	# Check if all necessary arguments are present
+	my $dbh=$arg_ref->{'dbh'} or die "prep_short_file: Specify database handler";
+	my $short_id=$arg_ref->{'short_id'} or die "prep_short_file: Specify shortcut id";
+	
+	# Die if there is no db connection
+	die "prep_short_file: No database connection"
+	  if (! PerlPress::DBAcc::status_db({ dbh=>$dbh }));
+	
+	# Now create a temporary file in ../temp/, load the shortcut data,
+	# save them to the file and finally open this file in an editor
+	my $file=$ENV{'TMP_DIR'}."/S".$short_id."_".PerlPress::Tools::now_dir().".txt";
+	my $fh=IO::File->new( ">$file" ) or die "Could not open file: $!";
+
+	# Load the article data
+	my $short=PerlPress::DBAcc::load_short_data({ dbh=>$dbh, short_id=>$short_id });
+
+    printfile({ fh=>$fh, str=>"=== SHORTCUT INFORMATION ".("="x52)."\n\n" });
+	printfile({ fh=>$fh, str=>"Descr=\"".$short->{'descr'}."\"\n" });
+	printfile({ fh=>$fh, str=>"Find=\"".$short->{'find'}."\"\n" });
+	printfile({ fh=>$fh, str=>"Repl=\"".$short->{'repl'}."\"\n" });
+	printfile({ fh=>$fh, str=>"Enabled=\"".$short->{'enabled'}."\"\n" });
+	printfile({ fh=>$fh, str=>"=== EOF ".("="x69) });
+	$fh->close;
+	
+	# Finally open the file for editing
+	# Therefore call the function edit_art_file()
+	edit_short_file({ dbh=>$dbh, file=>$file, short_id=>$short_id });
+}
+
+=head2 edit_art_file
+
+Open the temporary article file holding the article data so that the
+user can modify them.
+
+=cut
+
+sub edit_art_file
+{
+	# Get a reference to a hash containing the routine's arguments
+	my ($arg_ref)=@_;
+  
+	# Check if all necessary arguments are present
+	my $dbh=$arg_ref->{'dbh'} or die "edit_art_file: Specify database handler";
+	my $file=$arg_ref->{'file'} or die "edit_art_file: Specify name of temporary file";
+	my $art_id=$arg_ref->{'art_id'} or die "edit_art_file: Specify article id";
+
+	# Open file in editor
+	my $editor=$ENV{'EDITOR'};
+	system $editor, $file;
+
+	# Fine, user finished editing. Now read in file and verify inputs.
+	# Therefore call function verify_art_data()
+	verify_art_data({ dbh=>$dbh, file=>$file, art_id=>$art_id });
+}
+
+=head2 edit_short_file
+
+Open the temporary shortcut file holding the shortcut data so that the
+user can modify them.
+
+=cut
+
+sub edit_short_file
+{
+	# Get a reference to a hash containing the routine's arguments
+	my ($arg_ref)=@_;
+  
+	# Check if all necessary arguments are present
+	my $dbh=$arg_ref->{'dbh'} or die "edit_short_file: Specify database handler";
+	my $file=$arg_ref->{'file'} or die "edit_short_file: Specify name of temporary file";
+	my $short_id=$arg_ref->{'short_id'} or die "edit_short_file: Specify shortcut id";
+
+	# Open file in editor
+	my $editor=$ENV{'EDITOR'};
+	system $editor, $file;
+
+	# Fine, user finished editing. Now read in file and verify inputs.
+	# Therefore call function verify_short_data()
+	verify_short_data({ dbh=>$dbh, file=>$file, short_id=>$short_id });
+}
+
+=head2 verify_art_data
+
+Scans a temporary file holding the article data and verifies its
+completeness and correctness. If successful, then call routine to
+update the database.
+
+=cut
+
+sub verify_art_data
+{
+	# Get a reference to a hash containing the routine's arguments
+	my ($arg_ref)=@_;
+  
+	# Initialize variable for user input
+	my $input="";
+  
+	# Check if all necessary arguments are present
+	my $dbh=$arg_ref->{'dbh'} or die "verify_art_data: Specify database handler";
+	my $file=$arg_ref->{'file'} or die "verify_art_data: Specify name of temporary file";
+	my $art_id=$arg_ref->{'art_id'} or die "verify_art_data: Specify article id";
+	
+	my $fh=IO::File->new( "<$file" ) or die "Could not open file: $!";
+	binmode $fh, ':encoding(UTF-8)';
+	my @data=<$fh>;
+	my $data=join("", @data);
+	$fh->close();
+
+	# Hash reference holding the article data
+	my $art;
+	$art->{'art_id'}=$art_id;
+	
+	my @attr=qw(title subtitle created modified author type link status categories tags featured);
+	foreach my $a (@attr)
+	{
+		$art->{$a}=$1 if ($data=~m/$a\s*=\s*\"(.*)\"/i);
+	}
+	
+	$art->{'alias'}=PerlPress::Tools::title2link({ title=>$art->{'title'}, max_length=>$ENV{'MAX_LEN_LINK'} });
+	$art->{'intr_text'}=trim($1) if ($data=~m/[=]{3} INTRO TEXT [=]+\s*(.*)\s*[=]{3} FULL TEXT/is);
+	$art->{'full_text'}=trim($1) if ($data=~m/[=]{3} FULL TEXT [=]+\s*(.*)\s*[=]{3} NOTES/is);
+	$art->{'notes'}=trim($1) if ($data=~m/[=]{3} NOTES [=]+\s*(.*)\s*[=]{3} EOF/is);
+	
+	# Check the attribute "type". It should be either blog, page or nav
+	$art->{'type'}=lc $art->{'type'};
+	if (! ($art->{'type'}=~m/(blog|page|nav)/))
+	{
+		print "\nYou specified an invalid value for \"type\"\n";
+		print "Type shall be either \"blog\", \"page\" or \"nav\"\n";
+		print "\nPress any key to return to the article editor . . .\n";
+		chomp ($input = <>);
+		edit_art_file({ dbh=>$dbh, file=>$file, art_id=>$art_id });
+	}
+	
+	# If type=nav, then a valid link should be given
+	if ($art->{'type'}=~m/nav/ && (! ($art->{'link'}=~m/$RE{URI}{HTTP}/)))
+	{
+		print "\nYou set type = \"nav\" and specified an invalid link attribute.\n";
+		print "Linke shall be a valid URL, like \"http://www.example.com\".\n";
+		print "\nPress any key to return to the article editor . . .\n";
+		chomp ($input = <>);
+		edit_art_file({ dbh=>$dbh, file=>$file, art_id=>$art_id });
+	}
+	
+	# Retrieve the categories. For each catergory determine the cat_id
+	# from the database. If the category does not exist, it will get
+	# the temporary cat_id -1.
+	my @cat_name=split(/,\s*/, $art->{'categories'});
+	my @cat_ids=@{PerlPress::DBAcc::get_cat_id({ dbh=>$dbh, cat_name=>\@cat_name })};
+
+	# Now list the unexisting categories if any and ask the user what
+	# to do.
+	if (grep {$_==-1} @cat_ids)
+	{
+		print "You used the following unexisting categories:\n\n";
+		foreach my $c (0 .. $#cat_ids)
+		{
+			print "  \"", $cat_name[$c], "\"\n\n" if ($cat_ids[$c]==-1);
+		}
+		print "Do you want to (c)reate them or (e)dit the article again? [c/E]: ";
+		chomp ($input = <>);
+		if ($input=~/^c$/i)
+		{
+
+		} else
+		{
+			# User wants to edit the article again
+			edit_art_file({ dbh=>$dbh, file=>$file, art_id=>$art_id });
+		}		
+	}
+	$art->{'cat_names'}=\@cat_name;
+	$art->{'cat_ids'}=\@cat_ids;
+
+	# Get the tags. In contrast to categories, unexisting tags will be
+	# created without further asking. All tags are lower case by
+	# default.
+	my @tag_names=split(/,\s*/, lc($art->{'tags'}));
+	$art->{'tag_names'}=\@tag_names;
+	$art->{'tag_ids'}=PerlPress::DBAcc::get_tag_id({ dbh=>$dbh, tag_name=>\@tag_names });
+	
+	# Update article information in database
+	PerlPress::DBAcc::update_art({ dbh=>$dbh, art=>$art });
+}
+
+=head2 verify_short_data
+
+Scans a temporary file holding the HTML shortcut data and verifies its
+completeness and correctness. If successful, then call routine to
+update the database.
+
+=cut
+
+sub verify_short_data
+{
+	# Get a reference to a hash containing the routine's arguments
+	my ($arg_ref)=@_;
+  
+	# Initialize variable for user input
+	my $input="";
+  
+	# Check if all necessary arguments are present
+	my $dbh=$arg_ref->{'dbh'} or die "verify_short_data: Specify database handler";
+	my $file=$arg_ref->{'file'} or die "verify_short_data: Specify name of temporary file";
+	my $short_id=$arg_ref->{'short_id'} or die "verify_short_data: Specify shortcut id";
+	
+	my $fh=IO::File->new( "<$file" ) or die "Could not open file: $!";
+	binmode $fh, ':encoding(UTF-8)';
+	my @data=<$fh>;
+	my $data=join("", @data);
+	$fh->close();
+
+	# Hash reference holding the short data
+	my $short;
+	$short->{'short_id'}=$short_id;
+	
+	my @attr=qw(descr find repl enabled);
+	foreach my $a (@attr)
+	{
+		$short->{$a}=$1 if ($data=~m/$a\s*=\s*\"(.*)\"/i);
+	}
+	
+	# Check the attribute "enabled". It should be either yes or no
+	$short->{'enabled'}=lc $short->{'enabled'};
+	if (! ($short->{'enabled'}=~m/(yes|no)/))
+	{
+		print "\nYou specified an invalid value for \"enabled\"\n";
+		print "Type shall be either \"yes\" or \"no\"\n";
+		print "\nPress any key to return to the shortcut editor . . .\n";
+		chomp ($input = <>);
+		edit_short_file({ dbh=>$dbh, file=>$file, short_id=>$short_id });
+	}
+	
+	# Update article information in database
+	PerlPress::DBAcc::update_short({ dbh=>$dbh, short=>$short });
+}
+
+=head2 edit_cat
+
+Edit the category's properties.
+
+=cut
+
+sub edit_cat
+{
+	# Get a reference to a hash containing the routine's arguments
+	my ($arg_ref)=@_;
+  
+	# Check if all necessary arguments are present
+	my $dbh=$arg_ref->{'dbh'} or die "edit_cat: Specify database handler";
+	my $cat_id=$arg_ref->{'cat_id'} || -1;
+	
+	# Abort subroutine if there is no db connection
+	if (! PerlPress::DBAcc::status_db({ dbh=>$dbh }))
+	{
+		print "No database connection.\n";
+		print "Connect with \"connect\" first.\n\n";
+		return;
+	}
+
+	# Abort if no category id given or invalid
+	if ($cat_id==-1)
+	{
+		print "Please specify a (valid) category ID.\n\n";
+		return;
+	}	
+	# Check if category with cat_id exists in database
+	if (! PerlPress::DBAcc::check_cat_exist({ dbh=>$dbh, cat_id=>$cat_id }))
+	{
+		# No such cat in db
+		print "No category with ID \"", $cat_id, "\" in database.\n\n";
+		return;
+	}
+	
+	#my @cat_id_arr;
+	#push @cat_id_arr, $cat_id;
+	my $cat_name=PerlPress::DBAcc::get_cat_name({ dbh=>$dbh, cat_id=>[$cat_id] });
+	$cat_name=${$cat_name}[0];
+	$cat_name=encode("utf-8", $cat_name);
+
+	my $new_name="";
+	while($new_name=~/^\s*$/)
+	{
+		print "Old category name: \"", $cat_name, "\"\n";
+		print "New name: ";
+		chomp ($input = <>);
+		if (! $input=~/^\s*$/)
+		{
+			# Check if name already exists
+			$new_name=$input;
+			my $cat_id=${PerlPress::DBAcc::get_cat_id({ dbh=>$dbh, cat_name=>[$new_name] })}[0];
+			if ($cat_id!=-1)
+			{
+				# New category already exists
+				print "\nCategory name \"", $new_name, "\" already exists.\n\n";
+			} else {
+				# Update category information
+				PerlPress::DBAcc::update_cat({ dbh=>$dbh,
+											   cat=>{ cat_id=>$cat_id,
+													  cat_name=>$new_name } });				
+			}
+		}
+	}
+	
+	print "\n\n";	
+}
+
+=head2 edit_tag
+
+Edit the tag's properties.
+
+=cut
+
+sub edit_tag
+{
+	# Get a reference to a hash containing the routine's arguments
+	my ($arg_ref)=@_;
+  
+	# Check if all necessary arguments are present
+	my $dbh=$arg_ref->{'dbh'} or die "edit_tag: Specify database handler";
+	my $tag_id=$arg_ref->{'tag_id'} || -1;
+	
+	# Abort subroutine if there is no db connection
+	if (! PerlPress::DBAcc::status_db({ dbh=>$dbh }))
+	{
+		print "No database connection.\n";
+		print "Connect with \"connect\" first.\n\n";
+		return;
+	}
+
+	# Abort if no tag id given or invalid
+	if ($tag_id==-1)
+	{
+		print "Please specify a (valid) tag ID.\n\n";
+		return;
+	}	
+	# Check if tag with tag_id exists in database
+	if (! PerlPress::DBAcc::check_tag_exist({ dbh=>$dbh, tag_id=>$tag_id }))
+	{
+		# No such tag in db
+		print "No tag with ID \"", $tag_id, "\" in database.\n\n";
+		return;
+	}
+	
+	my $tag_name=PerlPress::DBAcc::get_tag_name({ dbh=>$dbh, tag_id=>[$tag_id] });
+	$tag_name=${$tag_name}[0];
+	$tag_name=encode("utf-8", $tag_name);
+	
+	my $new_name="";
+	while($new_name=~/^\s*$/)
+	{
+		print "Old tag name: \"", $tag_name, "\"\n";
+		print "New name: ";
+		chomp ($input = <>);
+		if (! $input=~/^\s*$/)
+		{
+			# Check if name already exists
+			$new_name=$input;
+			my $tag_id=${PerlPress::DBAcc::get_tag_id({ dbh=>$dbh, tag_name=>[$new_name] })}[0];
+			if ($tag_id!=-1)
+			{
+				# New tag already exists
+				print "\nTag \"", $new_name, "\" already exists.\n\n";
+			} else {
+				# Update tag information
+				PerlPress::DBAcc::update_tag({ dbh=>$dbh,
+											   tag=>{ tag_id=>$tag_id,
+													  tag_name=>$new_name } });				
+			}
+		}
+	}
+	
+	print "\n\n";	
+}
+
+=head2 edit_short
+
+Edit the properties of an existing HTML shortcut.
+
+=cut
+
+sub edit_short
+{
+	# Get a reference to a hash containing the routine's arguments
+	my ($arg_ref)=@_;
+  
+	# Check if all necessary arguments are present
+	my $dbh=$arg_ref->{'dbh'} or die "edit_short: Specify database handler";
+	my $short_id=$arg_ref->{'short_id'} || -1;
+	
+	# Abort subroutine if there is no db connection
+	if (! PerlPress::DBAcc::status_db({ dbh=>$dbh }))
+	{
+		print "No database connection.\n";
+		print "Connect with \"connect\" first.\n\n";
+		return;
+	}
+
+	# Abort if no short id given or invalid
+	if ($short_id==-1)
+	{
+		print "Please specify a (valid) short ID.\n\n";
+		return;
+	}	
+	# Check if short with short_id exists in database
+	if (! PerlPress::DBAcc::check_short_exist({ dbh=>$dbh, short_id=>$short_id }))
+	{
+		# No such short in db
+		print "No short with ID \"", $short_id, "\" in database.\n\n";
+		return;
+	}
+	
+	# Finally go ahead with creating the temporary file holding the
+	# HTML shortcut data for editing by the user.
+	# Therefore call function prep_short_file()
+	prep_short_file({ dbh=>$dbh, short_id=>$short_id });
+}
+
+=head2 rm_cat
+
+Remove category from database.
+
+=cut
+
+sub rm_cat
+{
+	# Get a reference to a hash containing the routine's arguments
+	my ($arg_ref)=@_;
+  
+	# Check if all necessary arguments are present
+	my $dbh=$arg_ref->{'dbh'} or die "rm_cat: Specify database handler";
+	my $cat_id=$arg_ref->{'cat_id'} || -1;
+	
+	# Abort subroutine if there is no db connection
+	if (! PerlPress::DBAcc::status_db({ dbh=>$dbh }))
+	{
+		print "No database connection.\n";
+		print "Connect with \"connect\" first.\n\n";
+		return;
+	}
+
+	# Abort if no category id given or invalid
+	if ($cat_id==-1)
+	{
+		print "Please specify a (valid) category ID.\n\n";
+		return;
+	}	
+	# Check if category with cat_id exists in database
+	if (! PerlPress::DBAcc::check_cat_exist({ dbh=>$dbh, cat_id=>$cat_id }))
+	{
+		# No such cat in db
+		print "No category with ID \"", $cat_id, "\" in database.\n\n";
+		return;
+	}
+	
+	my @cat_id_arr;
+	push @cat_id_arr, $cat_id;
+	my $cat_name=PerlPress::DBAcc::get_cat_name({ dbh=>$dbh, cat_id=>\@cat_id_arr });
+	$cat_name=${$cat_name}[0];
+	$cat_name=encode("utf-8", $cat_name);
+	print "Do you really want to remove category ",
+	      "\"", $cat_name, "\"? [y/N]: ";
+	chomp ($input = <>);
+	if ($input=~/^y$/i)
+	{
+		# Finally remove the category from database (along with all
+		# linkings to articles).
+		PerlPress::DBAcc::rm_cat({ dbh=>$dbh, cat_id=>$cat_id });
+	} else
+	{
+		return;
+	}
+	print "\n\n";
+}
+
+=head2 rm_tag
+
+Remove tag from database.
+
+=cut
+
+sub rm_tag
+{
+	# Get a reference to a hash containing the routine's arguments
+	my ($arg_ref)=@_;
+  
+	# Check if all necessary arguments are present
+	my $dbh=$arg_ref->{'dbh'} or die "rm_tag: Specify database handler";
+	my $tag_id=$arg_ref->{'tag_id'} || -1;
+	
+	# Abort subroutine if there is no db connection
+	if (! PerlPress::DBAcc::status_db({ dbh=>$dbh }))
+	{
+		print "No database connection.\n";
+		print "Connect with \"connect\" first.\n\n";
+		return;
+	}
+
+	# Abort if no category id given or invalid
+	if ($tag_id==-1)
+	{
+		print "Please specify a (valid) tag ID.\n\n";
+		return;
+	}	
+	# Check if category with tag_id exists in database
+	if (! PerlPress::DBAcc::check_tag_exist({ dbh=>$dbh, tag_id=>$tag_id }))
+	{
+		# No such tag in db
+		print "No tag with ID \"", $tag_id, "\" in database.\n\n";
+		return;
+	}
+	
+	my @tag_id_arr;
+	push @tag_id_arr, $tag_id;
+	my $tag_name=PerlPress::DBAcc::get_tag_name({ dbh=>$dbh, tag_id=>\@tag_id_arr });
+	$tag_name=${$tag_name}[0];
+	$tag_name=encode("utf-8", $tag_name);
+	print "Do you really want to remove tag ",
+	      "\"", $tag_name, "\"? [y/N]: ";
+	chomp ($input = <>);
+	if ($input=~/^y$/i)
+	{
+		# Finally remove the tag from database (along with all
+		# linkings to articles).
+		PerlPress::DBAcc::rm_tag({ dbh=>$dbh, tag_id=>$tag_id });
+	} else
+	{
+		return;
+	}
+	print "\n\n";
+}
+
+=head2 rm_short
+
+Remove HTML shortcut from database.
+
+=cut
+
+sub rm_short
+{
+	# Get a reference to a hash containing the routine's arguments
+	my ($arg_ref)=@_;
+  
+	# Check if all necessary arguments are present
+	my $dbh=$arg_ref->{'dbh'} or die "rm_short: Specify database handler";
+	my $short_id=$arg_ref->{'short_id'} || -1;
+	
+	# Abort subroutine if there is no db connection
+	if (! PerlPress::DBAcc::status_db({ dbh=>$dbh }))
+	{
+		print "No database connection.\n";
+		print "Connect with \"connect\" first.\n\n";
+		return;
+	}
+
+	# Abort if no shortcut id given or invalid
+	if ($short_id==-1)
+	{
+		print "Please specify a (valid) shortcut ID.\n\n";
+		return;
+	}	
+	
+	# Check if HTML shortcut with short_id exists in database
+	if (! PerlPress::DBAcc::check_short_exist({ dbh=>$dbh, short_id=>$short_id }))
+	{
+		# No such shortcut in db
+		print "No shortcut with ID \"", $short_id, "\" in database.\n\n";
+		return;
+	}
+	
+	my $short_descr=PerlPress::DBAcc::get_short_descr({ dbh=>$dbh, short_id=>$short_id });
+	print "Do you really want to remove HTML shortcut ",
+	      "\"", $short_descr, "\"? [y/N]: ";
+	chomp ($input = <>);
+	if ($input=~/^y$/i)
+	{
+		# Finally remove the HTML shortcut from database
+		PerlPress::DBAcc::rm_short({ dbh=>$dbh, short_id=>$short_id });
+	} else
+	{
+		return;
+	}
+	print "\n\n";
+}
+
+=head2 rm_art
+
+Remove article from database.
+
+=cut
+
+sub rm_art
+{
+	# Get a reference to a hash containing the routine's arguments
+	my ($arg_ref)=@_;
+  
+	# Check if all necessary arguments are present
+	my $dbh=$arg_ref->{'dbh'} or die "rm_cat: Specify database handler";
+	my $art_id=$arg_ref->{'art_id'} || -1;
+	
+	# Abort subroutine if there is no db connection
+	if (! PerlPress::DBAcc::status_db({ dbh=>$dbh }))
+	{
+		print "No database connection.\n";
+		print "Connect with \"connect\" first.\n\n";
+		return;
+	}
+
+	# Abort if no article id given or invalid
+	if ($art_id==-1)
+	{
+		print "Please specify a (valid) article ID.\n\n";
+		return;
+	}
+	# Check if article with art_id exists in database
+	if (! PerlPress::DBAcc::check_art_exist({ dbh=>$dbh, art_id=>$art_id }))
+	{
+		# No such article in db
+		print "No article with ID \"", $art_id, "\" in database.\n\n";
+		return;
+	} else
+	{
+		# Load article data
+		my $art=PerlPress::DBAcc::load_art_data({ dbh=>$dbh, art_id=>$art_id });
+		my $title=encode("utf-8", $art->{"title"});
+		if (length($title)>39)
+		{
+			$title=substr($title,0,35)."...";
+		}
+		print "Do you really want to remove article with title\n",
+	      "\"", $title, "\"? [y/N]: ";
+		chomp ($input = <>);
+		if ($input=~/^y$/i)
+		{
+			PerlPress::DBAcc::rm_art({ dbh=>$dbh, art_id=>$art_id });
+		}
+	}
+	print "\n\n";
+}
+
+=head2 printfile
+
+Print to file
+
+=cut
+
+sub printfile
+{
+	# Get a reference to a hash containing the routine's arguments
+	my ($arg_ref)=@_;
+  
+	# Check if all necessary arguments are present
+	my $fh=$arg_ref->{'fh'} or die "printfile: Specify file handler";
+	my $enc=$arg_ref->{'enc'} || "utf-8";
+	my $str=$arg_ref->{'str'} || "";
+	
+	my $encoded=encode($enc, $str);
+	print $fh $encoded;
+}
+
+=head2 make
+
+Compile the website.
+
+=cut
+
+sub make
+{
+	# Get a reference to a hash containing the routine's arguments
+	my ($arg_ref)=@_;
+  
+	# Check if all necessary arguments are present
+	my $dbh=$arg_ref->{'dbh'};
+		
+	# Abort subroutine if there is no db connection
+	if (! PerlPress::DBAcc::status_db({ dbh=>$dbh }))
+	{
+		print "No database connection.\n";
+		print "Connect with \"connect\" first.\n\n";
+		return;
+	}
+	
+	# Ask if user really wants to compile the website
+	my $input;
+	print "Do you want to compile the website? [y/N]: ";
+	chomp($input = <>);
+	return if ($input =~ /^[^y]$/i);
+	print "\n";
+
+	# Okay, user really wants to compile the website. Going ahead ...
+		
+	# Now, prepare the file structure 
+	# Create base directory tree for website
+	my $dir=PerlPress::Tools::create_output_dir_tree({ dbh=>$dbh, outdir=>$ENV{'OUT_DIR'} });
+	
+	# Copy files from $src to base directory
+	rcopy($ENV{'SRC_DIR'}, $dir->{'base'}) or die $!;
+
+	# Get all published articles with type=(blog|page) and compile HTML
+	my @publ=@{PerlPress::DBAcc::get_publ_art({ dbh=>$dbh })};
+	foreach my $id (@publ)
+	{
+		print "  Create HTML for article with ID ", $id, "\n";
+		PerlPress::Compiler::html_art({ dbh=>$dbh, art_id=>$id, dirs=>$dir, templ=>$ENV{'TMPL'} });
+	}
+	
+	# Create HTML for categories
+	my $cats=PerlPress::DBAcc::get_cat_list({ dbh=>$dbh });
+	foreach my $cat_id (keys $cats)
+	{
+		print "  Create HTML for category with ID ", $cat_id, " . . . ";
+		my $n_pages=PerlPress::Compiler::html_list({ dbh=>$dbh, type=>"cat",
+		  id=>$cat_id, dirs=>$dir, templ=>$ENV{'TMPL'} });
+		print $n_pages, " pages\n";
+	}
+	
+	# Create HTML for tags
+	my $tags=PerlPress::DBAcc::get_tag_list({ dbh=>$dbh });
+	foreach my $tag_id (keys $tags)
+	{
+		print "  Create HTML for tag with ID ", $tag_id, " . . . ";
+		my $n_pages=PerlPress::Compiler::html_list({ dbh=>$dbh, type=>"tag",
+		  id=>$tag_id, dirs=>$dir, templ=>$ENV{'TMPL'} });
+		print $n_pages, " pages\n";
+	}
+	
+	# Create HTML for blog list
+	print "  Create HTML for blog . . . ";
+	my $n_pages=PerlPress::Compiler::html_list({ dbh=>$dbh, type=>"blog",
+	 dirs=>$dir, templ=>$ENV{'TMPL'} });
+	print $n_pages, " pages\n";
+	
+	# Create Sitemap
+	print "  Create Sitemap . . . ";
+	PerlPress::Compiler::sitemap({ dbh=>$dbh, dirs=>$dir, changefreq=>"weekly" });
+	print "DONE!\n";
+}
+

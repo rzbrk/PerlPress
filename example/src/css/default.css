@@ -1,0 +1,178 @@
+@font-face {
+  font-family: 'FiraSans';
+  src: url('FiraSans/FiraSans/FiraSans-Regular.eot');
+  src: url('FiraSans/FiraSans-Regular.eot?#iefix') format('embedded-opentype'),
+       url('FiraSans/FiraSans-Regular.woff') format('woff'),
+       url('FiraSans/FiraSans-Regular.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'FiraSans';
+  src: url('FiraSans/FiraSans-Light.eot');
+  src: url('FiraSans/FiraSans-Light.eot?#iefix') format('embedded-opentype'),
+       url('FiraSans/FiraSans-Light.woff') format('woff'),
+       url('FiraSans/FiraSans-Light.ttf') format('truetype');
+  font-weight: 300;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'FiraSans';
+  src: url('FiraSans/FiraSans-Medium.eot');
+  src: url('FiraSans/FiraSans-Medium.eot?#iefix') format('embedded-opentype'),
+       url('FiraSans/FiraSans-Medium.woff') format('woff'),
+       url('FiraSans/FiraSans-Medium.ttf') format('truetype');
+  font-weight: 500;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'FiraSans';
+  src: url('FiraSans/FiraSans-Bold.eot');
+  src: url('FiraSans/FiraSans-Bold.eot?#iefix') format('embedded-opentype'),
+       url('FiraSans/FiraSans-Bold.woff') format('woff'),
+       url('FiraSans/FiraSans-Bold.ttf') format('truetype');
+  font-weight: bold;
+  font-style: normal;
+}
+
+  * { font-family: 'FiraSans'; }
+  
+  body {
+    max-width: 940px;
+    margin: 0 auto;
+    font-family: FiraSans;
+    font-size: 12pt;
+    color: black;
+    background-color: white }
+
+  a:link {
+    color: blue;
+    text-decoration: none }
+
+  a:active {
+    color: blue;
+    text-decoration: none }
+
+  a:visited {
+    color: blue;
+    text-decoration: none }
+
+  a:hover {
+    color: blue;
+    text-decoration: underline }
+
+  header {
+    margin-top: 30px }
+
+  header h1 {
+    margin-top: 0px;
+    margin-bottom: 0px;
+    font-size: 300% }
+
+  header p.sub_title {
+    margin-top: 0px;
+    margin-bottom: 0px;
+    color: #808080;
+    font-size: 150% }
+
+  #logo {
+    float: left;
+    padding: 0;
+    margin: 0;
+    border: 0;
+    width: 50% }
+
+  #search {
+    float: right;
+    text-align: right;
+    padding: 0;
+    margin: 0;
+    border: 0;
+    width: 49.9% }
+
+  #cleaner {
+    clear: both;
+    height: 1px }
+
+  nav p {
+    font-size: 100%;
+    margin-top: 0px;
+    margin-bottom: 50px }
+
+  nav h2 {
+    font-size: 200%;
+    margin-top: 0px;
+    margin-bottom: 50px }
+
+  article {
+    background-color: #F0F0F0;
+    padding: 10px;
+    margin: 10px }
+
+  article h3 {
+    font-size: 200%;
+    margin-top: 0px;
+    margin-bottom: 0px }
+
+  article p.art_info, p.art_tags {
+    font-size: 90%;
+    margin-top: 0px;
+    margin-bottom: 0px }
+
+  article hr {
+    color: grey;
+    height: 1px }
+
+  article figure {
+    display: table;
+    text-align: center;
+    padding: 5px;
+    margin: 0px auto }
+
+  article figcaption {
+    display: block;
+    font-size: 90%;
+    font-style: italic }
+
+  article blockquote {
+    font-size: 110%;
+    font-style: italic;
+    margin-left: 50px; }
+
+  article div.code {
+    font-family: mono,monospace;
+    background-color: white;
+    border: 3px solid orange;
+    color: black;
+    margin-top: 10px;
+    margin-left: 50px;
+    margin-right: 50px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+    padding-left: 20px;
+    padding-right: 20px }
+
+  article div.terminal {
+    font-family: mono,monospace;
+    background-color: black;
+    border: 3px solid green;
+    border-radius: 10px;
+    color: green;
+    margin-top: 10px;
+    margin-left: 50px;
+    margin-right: 50px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+    padding-left: 20px;
+    padding-right: 20px }
+
+  article #video {
+    display: table;
+    text-align: center;
+    padding: 5px;
+    margin: 0px auto }
+
+  footer p {
+    color: #808080;
+    text-align: center;
+    font-size: 90% }

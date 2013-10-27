@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta http-equiv="content-type" content="text/html; charset=<TMPL_VAR NAME=CHARSET>" />
+<meta http-equiv="content-language" content="de" />
+<meta name="author" content="<TMPL_VAR NAME=META_AUTHOR>" />
+<meta name="description" content="<TMPL_VAR NAME=META_DESCR>" />
+<meta name="keywords" lang="de" content="<TMPL_VAR NAME=META_KEYWORDS>" />
+<meta name="date" content="<TMPL_VAR NAME=META_DATE>" />
+<meta name="generator" content="PerlPress" />
+<TMPL_UNLESS NAME=ART_PAGE>
+<meta name="robots" content="noindex,follow" />
+<meta name="googlebot" content="noindex,follow">
+<meta http-equiv="pragma" content="no-cache" />
+<meta http-equiv="cache-control" content="no-cache" />
+<meta name="googlebot" content="noarchive" />
+<TMPL_ELSE>
+<meta name="robots" content="all" />
+<meta http-equiv="expires" content="0" />
+</TMPL_UNLESS>
+<link rel="icon" href="<TMPL_VAR NAME=ICON_DIR>/small/comment.png" type="image/png" />
+<title><TMPL_VAR NAME=HEAD_TITLE></title>
+<link rel="stylesheet" href="<TMPL_VAR NAME=CSS>" type="text/css" />
+</head>
+
+<body>
+
+<header>
+<div id="logo">
+<h1><a href="<TMPL_VAR NAME=LINK_HOME>">example.com</a></h1>
+<p class="sub_title">My little own website</p>
+</div>
+<div id="search">
+<iframe src="http://duckduckgo.com/search.html?width=200&duck=yes&site=example.com&prefill=Search example.com" style="overflow:hidden;margin:0;padding:0;width:333px;height:60px;" frameborder="0"></iframe>
+</div>
+<div id="cleaner">&nbsp;</div>
+<hr />
+</header>
+
+<nav>
+<p>
+<TMPL_LOOP NAME=NAV_MENU>
+[<a href="<TMPL_VAR NAME=NAV_LINK>"><TMPL_VAR NAME=NAV_NAME></a>]&nbsp;
+</TMPL_LOOP>
+</p>
+
+<TMPL_IF NAME=CAT_PAGE>
+<h2><img align="absmiddle" src="<TMPL_VAR NAME=ICON_DIR>/big/folder.png" alt="Kategorie" /> <a href="<TMPL_VAR NAME=CAT_LINK>"><TMPL_VAR NAME=CAT_NAME></a></h2>
+</TMPL_IF>
+<TMPL_IF NAME=TAG_PAGE>
+<h2><img align="absmiddle" src="<TMPL_VAR NAME=ICON_DIR>/big/tag_red.png" alt="Tag" /> <a href="<TMPL_VAR NAME=TAG_LINK>"><TMPL_VAR NAME=TAG_NAME></a></h2>
+</TMPL_IF>
+</nav>
+
+<TMPL_LOOP NAME=ART_LIST>
+<article>
+<h3><a href="<TMPL_VAR NAME=ART_FULL_LINK>"><TMPL_VAR NAME=ART_TITLE></a></h3>
+<TMPL_IF NAME=ART_INFO_SHOW>
+<p class="art_info" ><img align="absmiddle" src="<TMPL_VAR NAME=ICON_DIR>/small/date.png" alt="Erstellt" />&nbsp;<TMPL_VAR NAME=ART_DATE>&emsp;
+<img align="absmiddle" src="<TMPL_VAR NAME=ICON_DIR>/small/folder.png" alt="Kategorien" />
+<TMPL_LOOP NAME=ART_CATEGORIES>
+&nbsp;<a href="<TMPL_VAR NAME=ART_CAT_LINK>"><TMPL_VAR NAME=ART_CAT_NAME></a><TMPL_UNLESS __LAST__>,</TMPL_UNLESS>
+</TMPL_LOOP>
+<!-- &emsp;<img align="absmiddle" src="<TMPL_VAR NAME=ICON_DIR>/small/comment_add.png" alt="Kommentieren" /> <a href="<TMPL_VAR NAME=ART_COMM_LINK>">Kommentieren</a>&emsp;<img align="absmiddle" src="<TMPL_VAR NAME=ICON_DIR>/small/email_to_friend.png" alt="Empfehlen" /> <a href="<TMPL_VAR NAME=ART_RECOMM_LINK>">Weiterempfehlen</a>&emsp;<img align="absmiddle" src="<TMPL_VAR NAME=ICON_DIR>/small/twitter_1.png" alt="Twittern" /> <a href="<TMPL_VAR NAME=ART_TWTTR_LINK>">Twittern</a> -->
+</p>
+</TMPL_IF>
+<hr />
+
+<TMPL_VAR NAME=ART_TXT_INTRO>
+
+<TMPL_IF NAME=ART_MORE>
+<p>[<a href="<TMPL_VAR NAME=ART_FULL_LINK>">Ganzer Artikel</a>]</p>
+<TMPL_ELSE>
+<TMPL_VAR NAME=ART_TXT_FULL>
+</TMPL_IF>
+
+<p class="art_tags"><img align="absmiddle" src="<TMPL_VAR NAME=ICON_DIR>/small/tag_red.png" alt="Tags" />
+<TMPL_LOOP NAME=ART_TAGS>
+&nbsp;<a href="<TMPL_VAR NAME=ART_TAG_LINK>"><TMPL_VAR NAME=ART_TAG_NAME></a><TMPL_UNLESS __LAST__>,</TMPL_UNLESS>
+</TMPL_LOOP>
+</p>
+
+</article>
+</TMPL_LOOP>
+
+<TMPL_UNLESS NAME=ART_PAGE>
+<TMPL_IF NAME=NAV_PAGE_FIRST>
+<p class="sel_page">[<a href="<TMPL_VAR NAME=PAGE_NEXT_LINK>">N&auml;chste Seite</a>]</p>
+</TMPL_IF>
+<TMPL_IF NAME=NAV_PAGE_LAST>
+<p class="sel_page">[<a href="<TMPL_VAR NAME=PAGE_PREV_LINK>">Vorherige Seite</a>]</p>
+</TMPL_IF>
+<TMPL_IF NAME=NAV_PAGE_MIDDLE>
+<p class="sel_page">[<a href="<TMPL_VAR NAME=PAGE_PREV_LINK>">Vorherige Seite</a>]&nbsp;[<a href="<TMPL_VAR NAME=PAGE_NEXT_LINK>">N&auml;chste Seite</a>]</p>
+</TMPL_IF>
+</TMPL_UNLESS>
+
+
+<footer>
+<hr />
+<p><a rel="license" href="http://creativecommons.org/licenses/by/2.0/"><img alt="Creative Commons License" style="border-width:0" src="http://i.creativecommons.org/l/by/2.0/88x31.png" /></a><br /> If not explicitly specified otherwise, this work is licensed under a <a rel="license" href="http://creativecommons.org/licenses/by/2.0/">Creative Commons Attribution 2.0 Generic License</a></p>
+<p>Free of PHP or JavaScript. Purely made with OpenSource Software.</p>
+</footer>
+
+</body>
+
+</html>
