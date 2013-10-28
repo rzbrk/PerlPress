@@ -11,6 +11,7 @@ use Switch;
 use Path::Class qw(dir file);
 use HTML::Strip;
 use Encode qw(encode decode);
+use Text::Unidecode;
 
 =head1 SUBROUTINES/METHODS
 
@@ -148,24 +149,36 @@ sub title2link
   my $title=$arg_ref->{'title'} or die "PerlPress::Tools::title2link: Specify title!\n";
   my $length=$arg_ref->{'max_length'} || 30;
 
-  # Define replacements for special characters
-  my %map = ("[Ää]" => "ae",
-             "[Öö]" => "oe",
-             "[Üü]" => "ue",
-             "ß" => "ss",
-             "[ ]+" => "_",
-             );
-
-  # Convert to lower case characters (will not work for german umlauts)
+  # Convert to lower case characters
   my $link= lc $title;
 
-  # Replace
-  foreach my $key (keys %map)
-  {
-    $link=~ s/$key/$map{$key}/g;
-  }
+  # First, normalize the string
+  # http://stackoverflow.com/questions/10742299/normalizing-ascii-characters
+  $link=unidecode($link);
+
+  ## Define replacements for special characters
+  #my %map = ("[Ää]" => "ae",
+             #"[Öö]" => "oe",
+             #"[Üü]" => "ue",
+             #"ß" => "ss",
+             #"[ ]+" => "_",
+             #"\"" => "",
+             #);
+
+  ## Replace
+  #foreach my $key (keys %map)
+  #{
+    #$link=~ s/$key/$map{$key}/g;
+  #}
+  
+  # Replace some special characters
+  $link=~s/\"//g;
+  $link=~s/[ ]+/_/g;
   $link=~ s/\W+/_/g;
   $link=~ s/[_]+/_/g;
+
+  # To be entirely sure ...
+  $link=uri_escape_utf8($link);
 
   # Reduce length of string $link
   $link=substr($link,0,$length);
@@ -174,24 +187,6 @@ sub title2link
   $link=~ s/_$//;
 
   return $link;
-}
-
-=head2 uri_esc
-
-Replaces each unsafe character in the input string with the corresponding escape
-sequence and returns the result. 
-
-=cut
-
-sub uri_esc
-{
-  # Get a reference to a hash containing the routine's arguments
-  my ($arg_ref)=@_;
-  
-  # Check if all necessary arguments are present
-  my $str=$arg_ref->{'str'} or die "PerlPress::Tools::uri_esc: Specify input string!\n";
-
-  return URI::Escape::uri_escape_utf8($str);
 }
 
 =head2 date_str2epoch
