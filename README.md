@@ -3,16 +3,16 @@
 PerlPress is a static web content management system written in the 
 programming language Perl. It can be used to build up a blog-style 
 website that consists of static files. PerlPress is currently in an 
-early development stage. Extensive documentation will follow.
+early development stage.
 
 ## Installation
 
 PerlPress is developed using [Dist::Zilla](http://dzil.org). After 
 cloning the repository make sure you have Dist::Zilla installed and 
-configured. Change to the directory PerlPress/ (hier you should find a 
-file named dist.ini) and run dzil install (you may be sudo first). 
+configured. Change to the directory PerlPress/ (here you should find a 
+file named dist.ini) and run `dzil install` (you may become sudo first). 
 Assuming the installation process ran successfully, you have all 
-libraries and executables needed.
+libraries and executables in place.
 
 Each PerlPress project has a source directory holding the HTML 
 template and other stuff. The article content is stored in a MySQL (or 
@@ -53,7 +53,7 @@ defined.
 To start PerlPress simply type `perlpress` to the command line. You
 should see the PerlPress prompt.
 
-First, open a project by typing `open [project]`. Replace project by
+First, open a project by typing `open [project]`. Replace "project" by
 the name of the project definition in the config file
 ~/.perlpress.conf. For the predefined example project "example" the
 command would be `open example`. Now, you are asked for the database
@@ -95,4 +95,3 @@ respectively.
 * `close` - Close project. After that, you can reconnect to a project.
 * `quit` - Quit PerlPress.
 
-Some other
