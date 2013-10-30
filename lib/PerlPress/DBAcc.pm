@@ -528,7 +528,7 @@ sub new_cat
 	
 	my $sth = $dbh->prepare("INSERT INTO categories (cat_name, alias) VALUES (?, ?)");
 	$sth->execute($cat_name,
-	              PerlPress::Tools::title2link({ title=>$cat_name, max_length=>$ENV{'MAX_LEN_LINK'} }))
+	              PerlPress::Tools::clearstr({ str=>$cat_name, max_len=>$ENV{'MAX_LEN_LINK'} }))
 	  or die "Couldn't execute statement: ".$dbh->errstr;
 	
 	# Now, we need the category ID of the new category.
@@ -555,7 +555,7 @@ sub new_tag
 	
 	my $sth = $dbh->prepare("INSERT INTO tags (tag_name, alias) VALUES (?, ?)");
 	$sth->execute($tag_name,
-				  PerlPress::Tools::title2link({ title=>$tag_name, max_length=>$ENV{'MAX_LEN_LINK'} }))
+				  PerlPress::Tools::clearstr({ str=>$tag_name, max_len=>$ENV{'MAX_LEN_LINK'} }))
 	  or die "Couldn't execute statement: ".$dbh->errstr;
 	
 	# Now, we need the tag ID of the new tag.
@@ -621,8 +621,8 @@ sub update_art
 	  or die "Couldn't execute statement: ".$dbh->errstr;
 	if ($sth2->fetchall_arrayref()->[0][0])
 	{
-		my $alias=PerlPress::Tools::title2link({ title=>$art->{'title'},
-												 max_length=>$ENV{'MAX_LEN_LINK'} });
+		my $alias=PerlPress::Tools::clearstr({ str=>$art->{'title'},
+												 max_len=>$ENV{'MAX_LEN_LINK'} });
 		my $filename=$art->{'art_id'}."_".$alias.".html";
 		my $ug = new Data::UUID;
 		my $uuid=$ug->create_from_name_str($ENV{'BASE_URL'}, $filename);
@@ -647,7 +647,7 @@ sub update_art
 		if ($cat_ids[$c]==-1) # Unexisting category
 		{
 			# Create category
-			my $cat_alias=PerlPress::Tools::title2link({ title=>$cat_names[$c], max_length=>$ENV{'MAX_LEN_LINK'} });
+			my $cat_alias=PerlPress::Tools::clearstr({ str=>$cat_names[$c], max_len=>$ENV{'MAX_LEN_LINK'} });
 			$sth=$dbh->prepare("INSERT INTO categories (cat_name, alias) VALUES (?, ?)");
 			$sth->execute($cat_names[$c], $cat_alias) or die "Couldn't execute statement: ".$dbh->errstr;
 			# Now, we need the category ID of the new category
@@ -672,7 +672,7 @@ sub update_art
 		if ($tag_ids[$t]==-1) # Unexisting tag
 		{
 			# Create tag
-			my $tag_alias=PerlPress::Tools::title2link({ title=>$tag_names[$t], max_length=>$ENV{'MAX_LEN_LINK'} });
+			my $tag_alias=PerlPress::Tools::clearstr({ str=>$tag_names[$t], max_len=>$ENV{'MAX_LEN_LINK'} });
 			$sth=$dbh->prepare("INSERT INTO tags (tag_name, alias) VALUES (?, ?)");
 			$sth->execute($tag_names[$t], $tag_alias) or die "Couldn't execute statement: ".$dbh->errstr;
 			# Now, we need the tag ID of the new tag
@@ -737,7 +737,7 @@ sub update_cat
   						     SET cat_name = ?, alias = ? WHERE cat_id = ?");
 	
 	$sth->execute($cat->{'cat_name'},
-				  PerlPress::Tools::title2link({ title=>$cat->{'cat_name'}, max_length=>$ENV{'MAX_LEN_LINK'} }),
+				  PerlPress::Tools::clearstr({ str=>$cat->{'cat_name'}, max_len=>$ENV{'MAX_LEN_LINK'} }),
   				  $cat->{'cat_id'}
   			     ) or die "Couldn't execute statement: ".$dbh->errstr;
 }
@@ -762,7 +762,7 @@ sub update_tag
   						     SET tag_name = ?, alias = ? WHERE tag_id = ?");
 	
 	$sth->execute($tag->{'tag_name'},
-				  PerlPress::Tools::title2link({ title=>$tag->{'tag_name'}, max_length=>$ENV{'MAX_LEN_LINK'} }),
+				  PerlPress::Tools::clearstr({ str=>$tag->{'tag_name'}, max_len=>$ENV{'MAX_LEN_LINK'} }),
   				  $tag->{'tag_id'}
   			     ) or die "Couldn't execute statement: ".$dbh->errstr;
 }

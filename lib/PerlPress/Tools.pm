@@ -130,63 +130,53 @@ sub create_output_dir_tree
 	return $dirs;
 }
 
-=head2 title2link
+=head2 clearstr
 
-Converts a given (title) string to a string removed from critical characters.
+Converts a given string to a string removed from critical characters.
 An optional second parameter is the maximum length of the output string.
-Default is 15 characters. 
+Default is 30 characters. 
 
-  my $link=PerlPress::Tools::title2link({ title=>$title, max_length=>$max_length });
+  my $link=PerlPress::Tools::clearstr({ str=>$str, max_len=>$len });
 
 =cut
 
-sub title2link
+sub clearstr
 {
-  # Get a reference to a hash containing the routine's arguments
-  my ($arg_ref)=@_;
-  
-  # Check if all necessary arguments are present
-  my $title=$arg_ref->{'title'} or die "PerlPress::Tools::title2link: Specify title!\n";
-  my $length=$arg_ref->{'max_length'} || 30;
+	# Get a reference to a hash containing the routine's arguments
+	my ($arg_ref)=@_;
 
-  # Convert to lower case characters
-  my $link= lc $title;
+	# Check if all necessary arguments are present
+	my $str=$arg_ref->{'str'} or die "PerlPress::Tools::clearstr: Specify title!\n";
+	my $len=$arg_ref->{'max_len'} || 30;
 
-  # First, normalize the string
-  # http://stackoverflow.com/questions/10742299/normalizing-ascii-characters
-  $link=unidecode($link);
+	# Convert to lower case characters
+	$str= lc $str;
 
-  ## Define replacements for special characters
-  #my %map = ("[Ää]" => "ae",
-             #"[Öö]" => "oe",
-             #"[Üü]" => "ue",
-             #"ß" => "ss",
-             #"[ ]+" => "_",
-             #"\"" => "",
-             #);
+	# Define special characters and replacements, which are not handled
+	# by Text::Unidecode as we want (e.g. "ä" -> "a" not "ae")
+	my %map = ("[ä]" => "ae",
+               "[ö]" => "oe",
+               "[ü]" => "ue",
+               "[ ]+" => "_",
+               "€" => "euro");
+	foreach my $c (keys %map) { $str=~s/$c/$map{$c}/g; };
 
-  ## Replace
-  #foreach my $key (keys %map)
-  #{
-    #$link=~ s/$key/$map{$key}/g;
-  #}
-  
-  # Replace some special characters
-  $link=~s/\"//g;
-  $link=~s/[ ]+/_/g;
-  $link=~ s/\W+/_/g;
-  $link=~ s/[_]+/_/g;
+	# Normalize string using Text::Unidecode
+	$str=Text::Unidecode::unidecode($str);
+	
+	# Remove remaining "special characters" like brackets and so on
+	$str=~s/[^-0-9_a-z]//g;
+	
+	$str=~s/_+/_/g;
+	$str=~s/^_//;
 
-  # To be entirely sure ...
-  $link=uri_escape_utf8($link);
+	# Reduce length of string $link
+	$str=substr($str,0,$len);
 
-  # Reduce length of string $link
-  $link=substr($link,0,$length);
+	# Remove trailing "_" if exist
+	$str=~ s/_$//;
 
-  # Remove trailing "_" if exist
-  $link=~ s/_$//;
-
-  return $link;
+	return $str;
 }
 
 =head2 date_str2epoch
@@ -275,32 +265,47 @@ sub epoch2date_str
   return $date_str;
 }
 
-=head2 strip_html
+=head2 striphtml
 
 Strips HTML markup from text string using HTML::Strip and reduces length
 of text string, if specified.
 
 =cut
 
-sub strip_html
+sub striphtml
 {
 	# Get a reference to a hash containing the routine's arguments
 	my ($arg_ref)=@_;
 
 	# Check if all necessary arguments are present
 	my $html=$arg_ref->{'html'} or die "PerlPress::Tools::strip_html: Specify input string!\n";
-	my $maxlen=$arg_ref->{'maxlen'} || 0;
+	my $len=$arg_ref->{'max_len'} || 0;
 	
 	my $hs = HTML::Strip->new();
-	my $clean = $hs->parse( $html );
-	$hs->eof;
+	
+	# Bug #42834 for HTML-Strip: HTML::Strip breaks UTF-8
+	# See: https://rt.cpan.org/Public/Bug/Display.html?id=42834
+	my $clean;
+	if ($HTML::Strip::VERSION <= 1.06)
+	{
+		$html = encode("utf8", $html);
+		$clean = $hs->parse( $html );
+		$hs->eof;
+		$clean=decode("utf8", $clean) if (! utf8::is_utf8($clean));
+	} else
+	{
+		$clean = $hs->parse( $html );
+		$hs->eof;
+	}
 
 	# Trim whitespace
 	$clean=~s/\s+/ /g;
-
-	$clean=substr($clean,0,$maxlen) if ($maxlen > 0);
 	
-	#return decode("utf-8", $clean);
+	# Remove " if present
+	$clean=~s/\"//g;
+
+	$clean=substr($clean,0,$len) if ($len > 0);
+	
 	return $clean
 }
 

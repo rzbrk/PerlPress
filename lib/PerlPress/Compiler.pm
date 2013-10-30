@@ -38,7 +38,7 @@ sub list_cat
   foreach my $cat_id (keys $cat)
   {
     $cat->{$cat_id}->{path}=$cat_dir."/".
-      PerlPress::Tools::title2link({ title=>$cat->{$cat_id}->{cat_name} });
+      PerlPress::Tools::clearstr({ str=>$cat->{$cat_id}->{cat_name}, max_len=>$ENV{'MAX_LEN_LINK'} });
   }
   
   return $cat;
@@ -180,7 +180,7 @@ sub html_art
 
 	$html->param(CHARSET => "utf-8",
 				 META_AUTHOR => $art->{'author'},
-				 META_DESCR => PerlPress::Tools::strip_html({ html=>$art->{'intr_text'}, maxlen=>150 }),
+				 META_DESCR => PerlPress::Tools::striphtml({ html=>$art->{'intr_text'}, max_len=>150 }),
 				 META_KEYWORDS => join(", ", @art_tag_names),
 				 META_DATE => PerlPress::Tools::epoch2date_str({ date=>$art->{'created_epoch'}, format=>"YYYY-MM-DDThh:mm:ss" }),
 				 HEAD_TITLE => $art->{'title'},
