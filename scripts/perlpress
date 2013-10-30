@@ -141,7 +141,7 @@ sub version
 	print color 'bold magenta';
 	print "  PerlPress\n";
 	print color 'reset';
-	print "  Version 0.1\n  Copyright (c) 2013 Jan Grosser\n\n";
+	print "  Version 0.2\n  Copyright (c) 2013 Jan Grosser\n\n";
 	print "  Type \"help\" for a list of available commands.\n\n";
 }
 
@@ -915,11 +915,7 @@ sub prep_art_file
 
 	# Finally open the file for editing
 	# Therefore call the function edit_art_file()
-	# Note: the article's alias is something special. It shall not
-	# change after it was initially created from the articles title.
-	# Therefore, the alias is passed beside the article file.
-	edit_art_file({ dbh=>$dbh, file=>$file, art_id=>$art_id,
-		            alias=>$art->{'alias'} });
+	edit_art_file({ dbh=>$dbh, file=>$file, art_id=>$art_id });
 }	
 
 =head2 prep_art_file
@@ -983,7 +979,6 @@ sub edit_art_file
 	my $dbh=$arg_ref->{'dbh'} or die "edit_art_file: Specify database handler";
 	my $file=$arg_ref->{'file'} or die "edit_art_file: Specify name of temporary file";
 	my $art_id=$arg_ref->{'art_id'} or die "edit_art_file: Specify article id";
-	my $alias=$arg_ref->{'alias'} || "";
 
 	# Open file in editor
 	my $editor=$ENV{'EDITOR'};
@@ -991,8 +986,7 @@ sub edit_art_file
 
 	# Fine, user finished editing. Now read in file and verify inputs.
 	# Therefore call function verify_art_data()
-	verify_art_data({ dbh=>$dbh, file=>$file, art_id=>$art_id,
-		              alias=>$alias });
+	verify_art_data({ dbh=>$dbh, file=>$file, art_id=>$art_id });
 }
 
 =head2 edit_short_file
@@ -1041,7 +1035,6 @@ sub verify_art_data
 	my $dbh=$arg_ref->{'dbh'} or die "verify_art_data: Specify database handler";
 	my $file=$arg_ref->{'file'} or die "verify_art_data: Specify name of temporary file";
 	my $art_id=$arg_ref->{'art_id'} or die "verify_art_data: Specify article id";
-	my $alias=$arg_ref->{'alias'} || "";
 
 	my $fh=IO::File->new( "<$file" ) or die "Could not open file: $!";
 	binmode $fh, ':encoding(UTF-8)';
@@ -1059,20 +1052,6 @@ sub verify_art_data
 		$art->{$a}=$1 if ($data=~m/$a\s*=\s*\"(.*)\"/i);
 	}
 	
-	if ($alias eq "")
-	{
-		# This is the case, if the user created a new article. Then, the
-		# alias is empty. Create a new alias from the article title.
-		$art->{'alias'}=PerlPress::Tools::title2link({ title=>$art->{'title'},
-													   max_length=>$ENV{'MAX_LEN_LINK'} });
-	} else
-	{
-		# This is the case, when the user edited an already existing
-		# article. Keep the old alias which was passed through the
-		# routine arguments.
-		$art->{'alias'}=$alias;
-	}
-
 	# Update the other article data
 	$art->{'intr_text'}=trim($1) if ($data=~m/[=]{3} INTRO TEXT [=]+\s*(.*)\s*[=]{3} FULL TEXT/is);
 	$art->{'full_text'}=trim($1) if ($data=~m/[=]{3} FULL TEXT [=]+\s*(.*)\s*[=]{3} NOTES/is);

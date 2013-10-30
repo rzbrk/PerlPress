@@ -84,7 +84,8 @@ sub nav_menu
 		} else # type=page
 		{
 			push @menu, { NAV_NAME => $art->{'title'},
-						  NAV_LINK => $dirs->{'art'}->relative($refdir)."/".$art_id."_".$art->{'alias'}.".html" };
+						  #NAV_LINK => $dirs->{'art'}->relative($refdir)."/".$art_id."_".$art->{'alias'}.".html" };
+						  NAV_LINK => $dirs->{'art'}->file($art->{'filename'})->relative($refdir) };
 		}
 	}
 
@@ -116,7 +117,7 @@ sub html_art
 	my $art=PerlPress::DBAcc::load_art_data({ dbh=>$dbh, dirs=>$dirs, art_id=>$art_id });
 
 	# The file name of the article HTML file
-	my $filename=$art_id."_".$art->{'alias'}.".html";
+	#my $filename=$art_id."_".$art->{'alias'}.".html";
 	
 	# Calculate some additional data
 	$art->{'created_epoch'}=PerlPress::Tools::date_str2epoch({ date=>$art->{created} });
@@ -188,7 +189,7 @@ sub html_art
 				 ICON_DIR => $dirs->{'icons'}->relative($refdir),
 				 NAV_MENU => \@nav_menu,
 				 ART_PAGE => 1,
-				 ART_LIST => [ { ART_FULL_LINK => $dirs->{'art'}->file($filename)->relative($refdir),
+				 ART_LIST => [ { ART_FULL_LINK => $dirs->{'art'}->file($art->{'filename'})->relative($refdir),
 								 ART_TITLE => $art->{'title'},
 								 ART_INFO_SHOW => 1,
 								 ART_DATE => PerlPress::Tools::epoch2date_str({ date=>$art->{'created_epoch'}, format=>"DD.MM.YYYY" }),
@@ -203,7 +204,7 @@ sub html_art
 				);
 
 	# Output the HTML code to a file
-	my $file=$dirs->{'art'}->file($filename);
+	my $file=$dirs->{'art'}->file($art->{'filename'});
 	open my $filehandle, ">", $file
 		or die "Could not open $file: $!";
 	binmode $filehandle, ':encoding(UTF-8)';
@@ -543,7 +544,8 @@ sub art_link
 	if (PerlPress::DBAcc::check_art_exist({ dbh=>$dbh, art_id=>$art_id }))
 	{
 		my $art=PerlPress::DBAcc::load_art_data({ dbh=>$dbh, art_id=>$art_id });
-		$link=$dirs->{'art'}->file($art_id."_".$art->{'alias'}.".html")->relative($refdir);
+		#$link=$dirs->{'art'}->file($art_id."_".$art->{'alias'}.".html")->relative($refdir);
+		$link=$dirs->{'art'}->file($art->{'filename'})->relative($refdir);
 	}
 	return "<a href=\"$link\">$text</a>";
 }

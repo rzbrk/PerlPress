@@ -5,6 +5,7 @@ package PerlPress::DBAcc;
 
 use DBI;
 use feature qw{ switch };
+use Data::UUID;
 
 =head1 SUBROUTINES/METHODS
 
@@ -252,18 +253,18 @@ database.
 
 sub get_art_list
 {
-  # Get a reference to a hash containing the routine's arguments
-  my ($arg_ref)=@_;
-  
-  # Check if all necessary arguments are present
-  my $dbh=$arg_ref->{'dbh'} or die "PerlPress::DBAcc::get_art_list: Specify database handler!\n";
+	# Get a reference to a hash containing the routine's arguments
+	my ($arg_ref)=@_;
 
-  my $sth = $dbh->prepare("SELECT art_id, title, author, status, type, alias, link FROM articles");
-  $sth->execute() or die "Couldn't execute statement: ".$dbh->errstr;
+	# Check if all necessary arguments are present
+	my $dbh=$arg_ref->{'dbh'} or die "PerlPress::DBAcc::get_art_list: Specify database handler!\n";
 
-  my $art=$sth->fetchall_hashref("art_id");
+	my $sth = $dbh->prepare("SELECT * FROM articles");
+	$sth->execute() or die "Couldn't execute statement: ".$dbh->errstr;
 
-  return $art;
+	my $art=$sth->fetchall_hashref("art_id");
+
+	return $art;
 }
 
 =head2 check_art_exist
@@ -377,6 +378,7 @@ sub load_art_data
   my $dbh=$arg_ref->{'dbh'} or die "PerlPress::DBAcc::load_art_data: Specify database handler!\n";
   my $art_id=$arg_ref->{'art_id'} or die "PerlPress::DBAcc::load_art_data: Specify article id!\n";
   
+  # Load the article data from table `articles` and `art_persist`
   my $sth = $dbh->prepare("SELECT * FROM articles WHERE (art_id=?)");
   $sth->execute($art_id)
     or die "Couldn't execute statement: ".$dbh->errstr;
@@ -464,6 +466,12 @@ sub new_art
 	# Now, we need the article ID of the new article.
 	# See: http://www.cgicorner.ch/tutor/12_mysql.shtml
 	my $art_id=$dbh->{'mysql_insertid'};
+
+	# Each article has persistent information. These information (like
+	# filename or UUID) are deduced and saved to the database, when the
+	# user first entered the article data. Hence, this is not done here
+	# (as the new article has now only dummy data), but when the routine
+	# update_art() is called the first time.
 	
 	return $art_id;
 }
@@ -576,7 +584,6 @@ sub update_art
 	my $sth = $dbh->prepare("UPDATE LOW_PRIORITY articles
   						     SET title = ?,
 						       subtitle = ?,
-						       alias = ?,
 						       author = ?,
 						       intr_text = ?,
 						       full_text = ?,
@@ -590,7 +597,6 @@ sub update_art
 	
 	$sth->execute($art->{'title'},
   				  $art->{'subtitle'},
-  				  $art->{'alias'},
   				  $art->{'author'},
   				  $art->{'intr_text'},
   				  $art->{'full_text'},
@@ -602,7 +608,33 @@ sub update_art
   				  $art->{'notes'},
   				  $art->{'art_id'}
   			     ) or die "Couldn't execute statement: ".$dbh->errstr;
-  			     
+
+	# Create persistent article data (alias, filename, uuid) if not yet
+	# set (=empty). Persistent data is deduced from other article data
+	# (namely the id and title). If an article is newly created before
+	# first user input, these data fields are left open. During first
+	# "article data update" with the first user inputs, the persistent
+	# data has to be created. If data is already set, leave it
+	# untouched, even if title or any other data changes:
+	my $sth2=$dbh->prepare("SELECT COUNT(*) FROM articles WHERE (art_id=? AND uuid=\"\")");
+	$sth2->execute($art->{'art_id'})
+	  or die "Couldn't execute statement: ".$dbh->errstr;
+	if ($sth2->fetchall_arrayref()->[0][0])
+	{
+		my $alias=PerlPress::Tools::title2link({ title=>$art->{'title'},
+												 max_length=>$ENV{'MAX_LEN_LINK'} });
+		my $filename=$art->{'art_id'}."_".$alias.".html";
+		my $ug = new Data::UUID;
+		my $uuid=$ug->create_from_name_str($ENV{'BASE_URL'}, $filename);
+		my $sth3=$dbh->prepare("UPDATE LOW_PRIORITY `articles` \n
+		  SET alias = ?,
+		    filename = ?,
+		    uuid = ?
+		  WHERE art_id = ?");
+		$sth3->execute($alias, $filename, $uuid, $art->{'art_id'})
+		  or die "Couldn't execute statement: ".$dbh->errstr;
+	}
+
 	# Categories
 	$sth=$dbh->prepare("DELETE FROM art_cat WHERE art_id=?");
 	$sth->execute($art->{'art_id'}) or die "Couldn't execute statement: ".$dbh->errstr;
