@@ -229,6 +229,7 @@ sub epoch2date_str
   # Check if all necessary arguments are present
   my $date=$arg_ref->{'date'} or die "PerlPress::Tools::epoch2date_str: Specify date string!\n";
   my $format=$arg_ref->{'format'} or die "PerlPress::Tools::epoch2date_str: Specify format!\n";
+  my $tz_offset=$arg_ref->{'tz_offset'} || 0; # Timezone offset to GMT in hours
   
   my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)=gmtime($date);
 
@@ -240,13 +241,18 @@ sub epoch2date_str
   $hour=sprintf "%02d", $hour;
   $min=sprintf "%02d", $min;
   $sec=sprintf "%02d", $sec;
-
+  $tz_offset=sprintf "%+03d:00", $tz_offset;
+  
   my $date_str;
   switch ($format)
   {
     case "YYYY-MM-DDThh:mm:ss"
     {
 	  $date_str=$year."-".$mon."-".$mday."T".$hour.":".$min.":".$sec;
+    }
+    case "YYYY-MM-DDThh:mm:ssTZD"
+    {
+	  $date_str=$year."-".$mon."-".$mday."T".$hour.":".$min.":".$sec.$tz_offset;
     }
     case "YYYY-MM-DD hh:mm:ss"
     {
