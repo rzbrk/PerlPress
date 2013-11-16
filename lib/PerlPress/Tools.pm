@@ -7,7 +7,8 @@ use Cwd;
 use URI::Escape;
 use utf8;
 use Time::Local;
-use Switch;
+#use Switch;
+use feature qw{ switch };
 use Path::Class qw(dir file);
 use HTML::Strip;
 use Encode qw(encode decode);
@@ -244,25 +245,25 @@ sub epoch2date_str
   $tz_offset=sprintf "%+03d:00", $tz_offset;
   
   my $date_str;
-  switch ($format)
+  given($format)
   {
-    case "YYYY-MM-DDThh:mm:ss"
+    when("YYYY-MM-DDThh:mm:ss")
     {
 	  $date_str=$year."-".$mon."-".$mday."T".$hour.":".$min.":".$sec;
     }
-    case "YYYY-MM-DDThh:mm:ssTZD"
+    when("YYYY-MM-DDThh:mm:ssTZD")
     {
 	  $date_str=$year."-".$mon."-".$mday."T".$hour.":".$min.":".$sec.$tz_offset;
     }
-    case "YYYY-MM-DD hh:mm:ss"
+    when("YYYY-MM-DD hh:mm:ss")
     {
 	  $date_str=$year."-".$mon."-".$mday." ".$hour.":".$min.":".$sec;
     }
-    case "DD.MM.YYYY"
+    when("DD.MM.YYYY")
     {
 	  $date_str=$mday.".".$mon.".".$year;
     }
-    else
+    default
     {
 	  die "PerlPress::Tools::epoch2date_str: Unrecognized date format!\n";
 	}
