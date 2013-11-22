@@ -5,7 +5,7 @@ package PerlPress::Compiler;
 
 use HTML::Template;
 use feature qw{ switch };
-use XML::Smart;
+#use XML::Smart;
 
 =head1 SUBROUTINES/METHODS
 
@@ -489,16 +489,14 @@ sub sitemap
 	# Base URL from environmental variables
 	my $base_url=$ENV{'BASE_URL'};
 	
-	# Initialize sitemap XML
+	# Open sitemap file
 	# See: http://de.wikipedia.org/wiki/Sitemaps-Protokoll#Beispiel
-	my $sitemap = XML::Smart->new(q`<?xml version="1.0" encoding="UTF-8" ?>
-	<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
-	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9
-	http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
-	</urlset>`);
-	$sitemap=$sitemap->{'urlset'};
-	
+	# See: http://www.sitemaps.org/de/protocol.html
+	open my $fh,">:utf8", $dirs->{'sitemap'}
+	  or die "PerlPress::Compiler::sitemap: Cannot open sitemap file $!";
+	print $fh "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n";
+	print $fh "<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n";
+
 	# Get all published articles with type=(blog|page)
 	my @publ=@{PerlPress::DBAcc::get_publ_art({ dbh=>$dbh })};
 	foreach my $art_id (@publ)
@@ -507,18 +505,18 @@ sub sitemap
 		my $art=PerlPress::DBAcc::load_art_data({ dbh=>$dbh, dirs=>$dirs, art_id=>$art_id });
 		$art->{'created_epoch'}=PerlPress::Tools::date_str2epoch({ date=>$art->{created} });
 		my $lastmod=PerlPress::Tools::epoch2date_str({ date=>$art->{'created_epoch'},
-													   format=>"YYYY-MM-DDThh:mm:ss" });
+													   format=>"YYYY-MM-DD" });
+		my $loc=$base_url."/art/".$art->{'filename'};
 		
-		my $url={loc=>$base_url."/art/".$art_id."_".$art->{'alias'}.".html",
-				 lastmod=>$lastmod,
-				 changefreq=>$ch_freq
-				};
-				
-		push(@{$sitemap->{'url'}} , $url);
+		print $fh "  <url>\n";
+		print $fh "    <loc>".$loc."</loc>\n";
+		print $fh "    <lastmod>".$lastmod."</lastmod>\n";
+		print $fh "    <changefreq>".$ch_freq."</changefreq>\n";
+		print $fh "  </url>\n";
 	}
 	
-	# Save to file
-	$sitemap->save($dirs->{'sitemap'});
+	print $fh "</urlset>\n";
+	close $fh;
 }
 
 =head2 art_link

@@ -263,6 +263,10 @@ sub epoch2date_str
     {
 	  $date_str=$mday.".".$mon.".".$year;
     }
+    when("YYYY-MM-DD")
+    {
+	  $date_str=$year."-".$mon."-".$mday;
+    }
     default
     {
 	  die "PerlPress::Tools::epoch2date_str: Unrecognized date format!\n";
