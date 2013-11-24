@@ -68,7 +68,7 @@ while ()
 		# DB connect & disconnect
 		when(m/^\s*(open|o)\s*$/i)
 		{ $dbh=open_project({ dbh=>$dbh, conf=>$conf }); }
-		when(m/^\s*(open|o)\s+(?<proj>.*)\s*$/i)
+		when(m/^\s*(open|o)\s+[\"]*(?<proj>[^\"]+)[\"]*\s*$/i)
 		{ $dbh=open_project({ dbh=>$dbh, conf=>$conf, proj=>$+{proj} }); }
 		when(m/^\s*(close|c)\s*$/i)
 		{ $dbh=close_project({ dbh=>$dbh }); }
