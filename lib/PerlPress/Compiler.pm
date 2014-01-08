@@ -6,6 +6,7 @@ package PerlPress::Compiler;
 use HTML::Template;
 use feature qw{ switch };
 #use XML::Smart;
+use Data::Dumper;
 
 =head1 SUBROUTINES/METHODS
 
@@ -161,9 +162,9 @@ sub html_art
 		warn $@ if $@;
 	}
 	
-	# This is a pre-defined shortcut to resolve internal article links
-	push @html_shortcuts, {find=>"\{article id=\"(?<id>.*)\"\}(?<txt>[^\{]*)\{\/article\}",
-	  repl=>sub{PerlPress::Compiler::art_link({ dbh=>$dbh, dirs=>$dirs, refdir=>$refdir, art_id=>$+{id}, text=>$+{txt} })}};
+	# Add pre-defined shortcuts
+	my @predef=@{PerlPress::Compiler::predef_shortcuts({ dbh=>$dbh, dirs=>$dirs, refdir=>$refdir })};
+	@html_shortcuts=(@html_shortcuts, @predef);
 	
 	foreach my $s (@html_shortcuts)
 	{
@@ -349,9 +350,9 @@ sub html_list
 				warn $@ if $@;
 			}
 			
-			# This is a pre-defined shortcut to resolve internal article links
-			push @html_shortcuts, {find=>"\{article id=\"(?<id>.*)\"\}(?<txt>[^\{]*)\{\/article\}",
-			  repl=>sub{PerlPress::Compiler::art_link({ dbh=>$dbh, dirs=>$dirs, refdir=>$refdir, art_id=>$+{id}, text=>$+{txt} })}};
+			# Add pre-defined shortcuts
+			my @predef=@{PerlPress::Compiler::predef_shortcuts({ dbh=>$dbh, dirs=>$dirs, refdir=>$refdir })};
+			@html_shortcuts=(@html_shortcuts, @predef);
 			
 			foreach my $s (@html_shortcuts)
 			{
@@ -546,6 +547,40 @@ sub art_link
 		$link=$dirs->{'art'}->file($art->{'filename'})->relative($refdir);
 	}
 	return "<a href=\"$link\">$text</a>";
+}
+
+=head2 predef_shortcuts
+
+Returns pre-defined (HTML) shortcuts as an array ref.
+
+=cut
+
+sub predef_shortcuts
+{
+	# Get a reference to a hash containing the routine's arguments
+	my ($arg_ref)=@_;
+	  
+	# Check if all necessary arguments are present
+	my $dbh=$arg_ref->{'dbh'} or die "PerlPress::Compiler::predef_shortcuts: Specify database handler!\n";
+	my $dirs=$arg_ref->{'dirs'} or die "PerlPress::Compiler::predef_shortcuts: Specify directory information!\n";
+	my $refdir=$arg_ref->{'refdir'} or die "PerlPress::Compiler::predef_shortcuts: Specify reference directory!\n";
+
+	# Initialize array
+	my @predef;
+	
+	# This shortcut resolvs internal article links
+	push @predef, {find=>"\{article id=\"(?<id>.*)\"\}(?<txt>[^\{]*)\{\/article\}",
+	  repl=>sub{PerlPress::Compiler::art_link({ dbh=>$dbh, dirs=>$dirs, refdir=>$refdir, art_id=>$+{id}, text=>$+{txt} })}};
+	
+	# This shortcut resolves the path to img directory
+	push @predef, {find=>"\{img\}(?<img>[^\{]*)\{\/img\}",
+	  repl=>sub{$dirs->{'img'}->file($+{img})->relative($refdir)}};
+	  
+	# This shortcut resolves the path to the files directory
+	push @predef, {find=>"\{file\}(?<file>[^\{]*)\{\/file\}",
+	  repl=>sub{$dirs->{'files'}->file($+{file})->relative($refdir)}};
+	
+	return \@predef;
 }
 
 1;
