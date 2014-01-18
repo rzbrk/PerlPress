@@ -17,20 +17,19 @@ use PerlPress::DBAcc;
 use PerlPress::Tools;
 use PerlPress::Compiler;
 
-# We need a configuration file. First, search in the current user's home
-# directory. If there is no .perlpress.conf, then try to find file
-# perlpress.conf in /etc.
+# We need a configuration file. All possible locations are defined in the
+# array @conf_tryfiles in descending order of priority. The path of the first
+# occurence is stored in the variable $conf. If no configuration file is
+# found, die.
+my @conf_tryfiles = (
+    $ENV{HOME} . "/.perlpress.conf",
+    "/etc/perlpress.conf",
+);
 my $conf="";
-if (-r $ENV{'HOME'} . "/.perlpress.conf")
-{
-	$conf=$ENV{'HOME'} . "/.perlpress.conf";
-} elsif (-r "/etc/perlpress.conf")
-{
-	$conf="/etc/perlpress.conf";
-} else
-{
-	die "No configuration file found, neither in $ENV{'HOME'}, nor in /etc/\n";
+foreach my $file (@conf_tryfiles) {
+    $conf=$file if ( $conf eq "" && -r $file );
 }
+die "No configuration file found\n" if ( $conf eq "" );
 
 # Initialize some other variables
 my $dbh;							# Database handler
