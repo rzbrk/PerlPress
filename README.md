@@ -14,11 +14,9 @@ file named dist.ini) and run `dzil install` (you may become sudo first).
 Assuming the installation process ran successfully, you have all 
 libraries and executables in place.
 
-Each PerlPress project has a source directory holding the HTML 
-template and other stuff. The article content is stored in a MySQL (or 
-MariaDB on newer systems) database. Therefore, you have to ensure, 
-MySQL or MariaDB is running. PerlPress is capable of accessing a 
-database on a remote machine.
+Each PerlPress project has a source directory holding the HTML template and 
+other stuff. The article content is stored in a SQLite database. Therefore, 
+you have to ensure, SQLite is installed.
 
 ## Setting up your project
 
@@ -36,14 +34,6 @@ into ~/PerlPress/, e.g.: `cp example/ ~/PerlPress/.`.
 in your home directory.
 * Edit ~/.perlpress.conf to suit your needs. If you have choosen other
 directories, change accordingly.
-* Ensure your MySQL/MariaDB is running properly. On my Fedora machine
-this can be done by the command
-`service mysqld status | grep "Active:"`. In the answer line you should
-read something like "Active: active (running) since ...".
-* Now change to the directory ~/PerlPress/example/db/. Here you find a
-file named init_db.sh. Keep the MySQL root's password (may in general 
-differ from that of system's root!) at hand and execute the script to
-set up the database.
 
 Now, you are finished! You have a complete little example project
 defined.
@@ -56,9 +46,7 @@ should see the PerlPress prompt.
 First, open a project by typing `open [project]`. Replace "project" by
 the name of the project definition in the config file
 ~/.perlpress.conf. For the predefined example project "example" the
-command would be `open example`. Now, you are asked for the database
-password. For the example project type in "test_secret". Don't be
-scared, there is no local echo of the password while typing in.
+command would be `open example`.
 
 After successful database connection the PerlPress prompt changed an
 indicates the connection by an asterisk between the brackets.

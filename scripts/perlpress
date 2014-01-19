@@ -4,7 +4,7 @@ use strict;
 use warnings;
 use feature qw{ switch };
 use Config::Simple;
-use Term::ReadKey;
+#use Term::ReadKey;
 use IO::File;
 use String::Util qw(trim);
 use Encode;
@@ -256,18 +256,14 @@ sub open_project
 		return $dbh;
 	}
 	
-	# If host, user or db name for the database connection are not
-	# defined in the configuration file, then leave without doing
-	# anything
-	
-	if (   ((! defined $proj_vars->{'host'}) && $proj_vars->{'host'}=~/\s*/)
-	    && ((! defined $proj_vars->{'db_user'}) && $proj_vars->{'db_user'}=~/\s*/)
-	    && ((! defined $proj_vars->{'database'}) && $proj_vars->{'database'}=~/\s*/))
-	{
-		print "Could not find all necessary database parameter (host, db_user,\n";
-		print "database) in \"$conf\", aborting.\n";
+    # Read database file name and see if it exists.
+    my $db=$proj_vars->{'database'};
+    $db=PerlPress::Tools::repl_with_home($db);
+    if ( (! defined $db) || (! -r $db) ) {
+		print "file readable: $db\n" if ( -r $db );
+		print "SQLite database file not defined or not found, aborting.\n";
 		return $dbh;
-	}
+    }
 	
 	# Check for the correctness and completness of some of the parameters
 	
@@ -308,22 +304,23 @@ sub open_project
 	}
 		
 	# Ask for database password (no echo while keyboard input)
-	print "\n  Host: ", $proj_vars->{'host'}, "\n";
-	print "  Database: ", $proj_vars->{'database'}, "\n";
-	print "  User: ", $proj_vars->{'db_user'}, "\n\n";
-	print "  Enter the database password: ";
-	my $pwd="";
-	ReadMode ('noecho');
-	chomp ($pwd = <>);
-	ReadMode ('restore');
-	print "\n\n";
+	#print "\n  Host: ", $proj_vars->{'host'}, "\n";
+	#print "  Database: ", $proj_vars->{'database'}, "\n";
+	#print "  User: ", $proj_vars->{'db_user'}, "\n\n";
+	#print "  Enter the database password: ";
+	#my $pwd="";
+	#ReadMode ('noecho');
+	#chomp ($pwd = <>);
+	#ReadMode ('restore');
+	#print "\n\n";
 	
 	# Connect to database and get database handler
 	print "Try to establish connection to db . . . ";
-	$dbh=PerlPress::DBAcc::connect_db({ host=>$proj_vars->{'host'},
-										db=>$proj_vars->{'database'},
-										usr=>$proj_vars->{'db_user'},
-										pwd=>$pwd });
+	$dbh=PerlPress::DBAcc::connect_db({ db=>$db });
+	#$dbh=PerlPress::DBAcc::connect_db({ host=>$proj_vars->{'host'},
+	#									db=>$proj_vars->{'database'},
+	#									usr=>$proj_vars->{'db_user'},
+	#									pwd=>$pwd });
 
 	# In case we have a valid db connection define the environmental
 	# variables

@@ -3,6 +3,7 @@ use warnings;
 package PerlPress::DBAcc;
 # ABSTRACT: Database access routines of PerlPress
 
+use Carp;
 use DBI;
 use feature qw{ switch };
 use Data::UUID;
@@ -20,21 +21,30 @@ attempt is not successfull the routine returns undef.
 
 sub connect_db
 {
-  # Get a reference to a hash containing the routine's arguments
-  my ($arg_ref)=@_;
+    # Get a reference to a hash containing the routine's arguments
+    my ($arg_ref)=@_;
   
-  # Check if all necessary arguments are present
-  my $host=$arg_ref->{'host'} || "127.0.0.1";
-  my $db=$arg_ref->{'db'} or die "PerlPress::DBAcc::connect_db: Specify name of database!\n";
-  my $usr=$arg_ref->{'usr'} or die "PerlPress::DBAcc::connect_db: Specify database user name!\n";
-  my $pwd=$arg_ref->{'pwd'} || "";
+    # Check if all necessary arguments are present
+    #my $host=$arg_ref->{'host'} || "127.0.0.1";
+    my $db=$arg_ref->{'db'}
+        or croak "Specify SQLite database name!\n";
+    #my $usr=$arg_ref->{'usr'} or die "PerlPress::DBAcc::connect_db: Specify database user name!\n";
+    #my $pwd=$arg_ref->{'pwd'} || "";
 
-  # Return database handler. If not successfull this routine should not die
-  # but return undef
-  my $dbh=DBI->connect("DBI:mysql:database=$db;host=$host",
-    $usr, $pwd, {mysql_enable_utf8 => 1}) || undef;
+    # Return database handler. If not successfull this routine should not die
+    # but return undef
+    #my $dbh=DBI->connect("DBI:mysql:database=$db;host=$host",
+    #    $usr, $pwd, {mysql_enable_utf8 => 1}) || undef;
+    my $dbh = DBI->connect(
+        "dbi:SQLite:dbname=$db",
+        "","",
+        {
+            RaiseError     => 1,
+            sqlite_unicode => 1,
+        }
+    );
 
-  return $dbh;
+    return $dbh;
 }
 
 =head2 disconnect_db
@@ -64,16 +74,16 @@ Get the databse connection status.
 
 sub status_db
 {
-  # Get a reference to a hash containing the routine's arguments
-  my ($arg_ref)=@_;
+    # Get a reference to a hash containing the routine's arguments
+    my ($arg_ref) = @_;
   
-  # Check if all necessary arguments are present
-  my $dbh=$arg_ref->{'dbh'} || undef;
+    # Check if all necessary arguments are present
+    my $dbh = $arg_ref->{'dbh'} || undef;
   
-  my $status=0;
-  $status=1 if ($dbh->{'Active'});
+    my $status = 0;
+    $status = 1 if ( $dbh->{'Active'} );
   
-  return $status;
+    return $status;
 }
 
 =head2 nav_entries
@@ -92,7 +102,7 @@ sub nav_entries
   my $dbh=$arg_ref->{'dbh'} or die "PerlPress::DBAcc::nav_entries: Specify database handler!\n";
 
   my $sth = $dbh->prepare("SELECT art_id FROM articles
-    WHERE (status=\"published\" && (type=\"page\" || type=\"nav\"))");
+    WHERE (status=\"published\" AND (type=\"page\" OR type=\"nav\"))");
   $sth->execute() or die "Couldn't execute statement: ".$dbh->errstr;
 
   my $nav_ids=$sth->fetchall_arrayref([0]);
@@ -132,13 +142,13 @@ sub get_publ_art
 	my $page_only=$arg_ref->{'page_only'} || 0;
 	my $blog_only=$arg_ref->{'blog_only'} || 0;
 
-	my $type="(type=\"page\" || type=\"blog\")";
+	my $type="(type=\"page\" OR type=\"blog\")";
 
 	if($page_only!=0 && $blog_only==0) { $type="type=\"page\""; }
 	if($page_only==0 && $blog_only!=0) { $type="type=\"blog\""; }
 	
 	my $sth = $dbh->prepare("SELECT art_id, created FROM articles
-	WHERE (status=\"published\" && ".$type.") ORDER BY created DESC");
+	WHERE (status=\"published\" AND ".$type.") ORDER BY created DESC");
 	$sth->execute() or die "Couldn't execute statement: ".$dbh->errstr;
 
 	# Loop over the results and get the article ids
@@ -581,7 +591,8 @@ sub update_art
 	my $art=$arg_ref->{'art'} or die "PerlPress::DBAcc::update_art: Specify article data!\n";
 		
 	# Update article data in table articles
-	my $sth = $dbh->prepare("UPDATE LOW_PRIORITY articles
+    #my $sth = $dbh->prepare("UPDATE LOW_PRIORITY articles
+    my $sth = $dbh->prepare("UPDATE articles
   						     SET title = ?,
 						       subtitle = ?,
 						       author = ?,
