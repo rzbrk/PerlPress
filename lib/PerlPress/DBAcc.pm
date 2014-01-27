@@ -591,7 +591,6 @@ sub update_art
 	my $art=$arg_ref->{'art'} or die "PerlPress::DBAcc::update_art: Specify article data!\n";
 		
 	# Update article data in table articles
-    #my $sth = $dbh->prepare("UPDATE LOW_PRIORITY articles
     my $sth = $dbh->prepare("UPDATE articles
   						     SET title = ?,
 						       subtitle = ?,
@@ -637,7 +636,7 @@ sub update_art
 		my $filename=$art->{'art_id'}."_".$alias.".html";
 		my $ug = new Data::UUID;
 		my $uuid=$ug->create_from_name_str($ENV{'BASE_URL'}, $filename);
-		my $sth3=$dbh->prepare("UPDATE LOW_PRIORITY `articles` \n
+		my $sth3=$dbh->prepare("UPDATE `articles` \n
 		  SET alias = ?,
 		    filename = ?,
 		    uuid = ?
@@ -713,7 +712,7 @@ sub update_short
 	my $short=$arg_ref->{'short'} or die "PerlPress::DBAcc::update_short: Specify shortcut data!\n";
 		
 	# Update HTML shortcut data in table html_shortcuts
-	my $sth = $dbh->prepare("UPDATE LOW_PRIORITY html_shortcuts
+	my $sth = $dbh->prepare("UPDATE html_shortcuts
   						     SET descr = ?,
 						       find = ?,
 						       repl = ?,
@@ -744,7 +743,7 @@ sub update_cat
 	my $cat=$arg_ref->{'cat'} or die "PerlPress::DBAcc::update_cat: Specify category data!\n";
 		
 	# Update category data in table categories
-	my $sth = $dbh->prepare("UPDATE LOW_PRIORITY categories
+	my $sth = $dbh->prepare("UPDATE categories
   						     SET cat_name = ?, alias = ? WHERE cat_id = ?");
 	
 	$sth->execute($cat->{'cat_name'},
@@ -769,7 +768,7 @@ sub update_tag
 	my $tag=$arg_ref->{'tag'} or die "PerlPress::DBAcc::update_tag: Specify tag data!\n";
 		
 	# Update category data in table tags
-	my $sth = $dbh->prepare("UPDATE LOW_PRIORITY tags
+	my $sth = $dbh->prepare("UPDATE tags
   						     SET tag_name = ?, alias = ? WHERE tag_id = ?");
 	
 	$sth->execute($tag->{'tag_name'},
