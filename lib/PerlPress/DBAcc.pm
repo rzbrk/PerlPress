@@ -15,7 +15,7 @@ use Data::UUID;
 Connects to database and returns the database handler. If the connection
 attempt is not successfull the routine returns undef.
 
- my $dbh=PerlPress::DBAcc::connect_db({ host=>$host, db=>$db, usr=>$usr, pwd=>$pwd });
+    my $dbh=PerlPress::DBAcc::connect_db({  db=>$db });
 
 =cut
 
@@ -25,16 +25,11 @@ sub connect_db
     my ($arg_ref)=@_;
   
     # Check if all necessary arguments are present
-    #my $host=$arg_ref->{'host'} || "127.0.0.1";
     my $db=$arg_ref->{'db'}
         or croak "Specify SQLite database name!\n";
-    #my $usr=$arg_ref->{'usr'} or die "PerlPress::DBAcc::connect_db: Specify database user name!\n";
-    #my $pwd=$arg_ref->{'pwd'} || "";
 
     # Return database handler. If not successfull this routine should not die
     # but return undef
-    #my $dbh=DBI->connect("DBI:mysql:database=$db;host=$host",
-    #    $usr, $pwd, {mysql_enable_utf8 => 1}) || undef;
     my $dbh = DBI->connect(
         "dbi:SQLite:dbname=$db",
         "","",
@@ -479,17 +474,16 @@ sub new_art
         "no",                       # featured
     ) or croak "Couldn't execute statement: ".$dbh->errstr;
 
-	# Now, we need the article ID of the new article.
-	# See: http://www.cgicorner.ch/tutor/12_mysql.shtml
-	my $art_id=$dbh->{'mysql_insertid'};
+    # Now, we need the article ID of the new article.
+    my $art_id = $dbh->sqlite_last_insert_rowid();
 
-	# Each article has persistent information. These information (like
-	# filename or UUID) are deduced and saved to the database, when the
-	# user first entered the article data. Hence, this is not done here
-	# (as the new article has now only dummy data), but when the routine
-	# update_art() is called the first time.
+    # Each article has persistent information. These information (like
+    # filename or UUID) are deduced and saved to the database, when the
+    # user first entered the article data. Hence, this is not done here
+    # (as the new article has now only dummy data), but when the routine
+    # update_art() is called the first time.
 	
-	return $art_id;
+    return $art_id;
 }
 
 =head2 new_short
@@ -524,9 +518,8 @@ sub new_short
         "no"            # enabled
     ) or croak "Couldn't execute statement: ".$dbh->errstr;
 
-	# Now, we need the shortcut ID of the shortcut.
-	# See: http://www.cgicorner.ch/tutor/12_mysql.shtml
-	my $short_id=$dbh->{'mysql_insertid'};
+    # Now, we need the shortcut ID of the shortcut.
+    my $short_id = $dbh->sqlite_last_insert_rowid();
 	
 	return $short_id;
 }
@@ -554,11 +547,11 @@ sub new_cat
 	    PerlPress::Tools::clearstr({ str=>$cat_name, max_len=>$ENV{'MAX_LEN_LINK'} })
 	) or croak "Couldn't execute statement: ".$dbh->errstr;
 	
-	# Now, we need the category ID of the new category.
-	# See: http://www.cgicorner.ch/tutor/12_mysql.shtml
-	my $cat_id=$dbh->{'mysql_insertid'};
-	
-	return $cat_id;
+    # Now, we need the category ID of the new category.
+    my $cat_id=$dbh->sqlite_last_insert_rowid();
+
+
+    return $cat_id;
 }
 
 =head new_tag
@@ -584,11 +577,10 @@ sub new_tag
         PerlPress::Tools::clearstr({ str=>$tag_name, max_len=>$ENV{'MAX_LEN_LINK'} })
     ) or croak "Couldn't execute statement: ".$dbh->errstr;
 	
-	# Now, we need the tag ID of the new tag.
-	# See: http://www.cgicorner.ch/tutor/12_mysql.shtml
-	my $tag_id=$dbh->{'mysql_insertid'};
+    # Now, we need the tag ID of the new tag.
+    my $tag_id=$dbh->sqlite_last_insert_rowid();
 	
-	return $tag_id;
+    return $tag_id;
 }
 
 =head2 update_art
@@ -705,8 +697,7 @@ sub update_art
                 $cat_alias
             ) or croak "Couldn't execute statement: ".$dbh->errstr;
 			# Now, we need the category ID of the new category
-			# See: http://www.cgicorner.ch/tutor/12_mysql.shtml
-			$cat_ids[$c]=$dbh->{'mysql_insertid'};
+			$cat_ids[$c]=$dbh->sqlite_last_insert_rowid();
 		}
 		
 		# Link the article to the category
@@ -752,8 +743,7 @@ sub update_art
                 $tag_alias
             ) or croak "Couldn't execute statement: ".$dbh->errstr;
             # Now, we need the tag ID of the new tag
-            # See: http://www.cgicorner.ch/tutor/12_mysql.shtml
-            $tag_ids[$t]=$dbh->{'mysql_insertid'};
+            $tag_ids[$t]=$dbh->sqlite_last_insert_rowid();
         }
 		
         # Link the article to the tag
