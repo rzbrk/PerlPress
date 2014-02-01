@@ -61,7 +61,7 @@ sub disconnect_db
   my ($arg_ref)=@_;
   
   # Check if all necessary arguments are present
-  my $dbh=$arg_ref->{'dbh'} or die "PerlPress::DBAcc::disconnect_db: Specify database handler!\n";
+  my $dbh=$arg_ref->{'dbh'} or croak "Specify database handler!\n";
 
   $dbh->disconnect();
 }
@@ -99,11 +99,11 @@ sub nav_entries
   my ($arg_ref)=@_;
   
   # Check if all necessary arguments are present
-  my $dbh=$arg_ref->{'dbh'} or die "PerlPress::DBAcc::nav_entries: Specify database handler!\n";
+  my $dbh=$arg_ref->{'dbh'} or croak "Specify database handler!\n";
 
   my $sth = $dbh->prepare("SELECT art_id FROM articles
     WHERE (status=\"published\" AND (type=\"page\" OR type=\"nav\"))");
-  $sth->execute() or die "Couldn't execute statement: ".$dbh->errstr;
+  $sth->execute() or croak "Couldn't execute statement: ".$dbh->errstr;
 
   my $nav_ids=$sth->fetchall_arrayref([0]);
   
@@ -138,7 +138,7 @@ sub get_publ_art
 	my ($arg_ref)=@_;
 
 	# Check if all necessary arguments are present
-	my $dbh=$arg_ref->{'dbh'} or die "PerlPress::DBAcc::get_publ_art: Specify database handler!\n";
+	my $dbh=$arg_ref->{'dbh'} or croak "Specify database handler!\n";
 	my $page_only=$arg_ref->{'page_only'} || 0;
 	my $blog_only=$arg_ref->{'blog_only'} || 0;
 
@@ -149,7 +149,7 @@ sub get_publ_art
 	
 	my $sth = $dbh->prepare("SELECT art_id, created FROM articles
 	WHERE (status=\"published\" AND ".$type.") ORDER BY created DESC");
-	$sth->execute() or die "Couldn't execute statement: ".$dbh->errstr;
+	$sth->execute() or croak "Couldn't execute statement: ".$dbh->errstr;
 
 	# Loop over the results and get the article ids
 	my @art_ids;
@@ -180,10 +180,10 @@ sub get_cat_list
   my ($arg_ref)=@_;
   
   # Check if all necessary arguments are present
-  my $dbh=$arg_ref->{'dbh'} or die "PerlPress::DBAcc::get_cat_list: Specify database handler!\n";
+  my $dbh=$arg_ref->{'dbh'} or croak "Specify database handler!\n";
 
   my $sth = $dbh->prepare("SELECT cat_id, cat_name, alias FROM categories");
-  $sth->execute() or die "Couldn't execute statement: ".$dbh->errstr;
+  $sth->execute() or croak "Couldn't execute statement: ".$dbh->errstr;
 
   my $cat=$sth->fetchall_hashref("cat_id");
 
@@ -209,10 +209,10 @@ sub get_tag_list
   my ($arg_ref)=@_;
   
   # Check if all necessary arguments are present
-  my $dbh=$arg_ref->{'dbh'} or die "PerlPress::DBAcc::get_tag_list: Specify database handler!\n";
+  my $dbh=$arg_ref->{'dbh'} or croak "Specify database handler!\n";
 
   my $sth = $dbh->prepare("SELECT tag_id, tag_name, alias FROM tags");
-  $sth->execute() or die "Couldn't execute statement: ".$dbh->errstr;
+  $sth->execute() or croak "Couldn't execute statement: ".$dbh->errstr;
 
   my $tags=$sth->fetchall_hashref("tag_id");
 
@@ -238,10 +238,10 @@ sub get_shorts_list
   my ($arg_ref)=@_;
   
   # Check if all necessary arguments are present
-  my $dbh=$arg_ref->{'dbh'} or die "PerlPress::DBAcc::get_shorts_list: Specify database handler!\n";
+  my $dbh=$arg_ref->{'dbh'} or croak "Specify database handler!\n";
 
   my $sth = $dbh->prepare("SELECT * FROM html_shortcuts");
-  $sth->execute() or die "Couldn't execute statement: ".$dbh->errstr;
+  $sth->execute() or croak "Couldn't execute statement: ".$dbh->errstr;
 
   my $shorts=$sth->fetchall_arrayref({});
 
@@ -267,10 +267,10 @@ sub get_art_list
 	my ($arg_ref)=@_;
 
 	# Check if all necessary arguments are present
-	my $dbh=$arg_ref->{'dbh'} or die "PerlPress::DBAcc::get_art_list: Specify database handler!\n";
+	my $dbh=$arg_ref->{'dbh'} or croak "Specify database handler!\n";
 
 	my $sth = $dbh->prepare("SELECT * FROM articles");
-	$sth->execute() or die "Couldn't execute statement: ".$dbh->errstr;
+	$sth->execute() or croak "Couldn't execute statement: ".$dbh->errstr;
 
 	my $art=$sth->fetchall_hashref("art_id");
 
@@ -290,12 +290,12 @@ sub check_art_exist
   my ($arg_ref)=@_;
   
   # Check if all necessary arguments are present
-  my $dbh=$arg_ref->{'dbh'} or die "PerlPress::DBAcc::check_art_exist: Specify database handler!\n";
+  my $dbh=$arg_ref->{'dbh'} or croak "Specify database handler!\n";
   my $art_id=$arg_ref->{'art_id'} || -1;
 
   # See: http://stackoverflow.com/questions/6165028/having-an-sql-select-query-how-do-i-get-number-of-items
   my $sth = $dbh->prepare("SELECT COUNT(*) FROM articles WHERE (art_id=?)");
-  $sth->execute($art_id) or die "Couldn't execute statement: ".$dbh->errstr;
+  $sth->execute($art_id) or croak "Couldn't execute statement: ".$dbh->errstr;
   
   return $sth->fetchall_arrayref()->[0][0];
 }
@@ -313,12 +313,12 @@ sub check_cat_exist
   my ($arg_ref)=@_;
   
   # Check if all necessary arguments are present
-  my $dbh=$arg_ref->{'dbh'} or die "PerlPress::DBAcc::check_cat_exist: Specify database handler!\n";
+  my $dbh=$arg_ref->{'dbh'} or croak "Specify database handler!\n";
   my $cat_id=$arg_ref->{'cat_id'} || -1;
 
   # See: http://stackoverflow.com/questions/6165028/having-an-sql-select-query-how-do-i-get-number-of-items
   my $sth = $dbh->prepare("SELECT COUNT(*) FROM categories WHERE (cat_id=?)");
-  $sth->execute($cat_id) or die "Couldn't execute statement: ".$dbh->errstr;
+  $sth->execute($cat_id) or croak "Couldn't execute statement: ".$dbh->errstr;
   
   return $sth->fetchall_arrayref()->[0][0];
 }
@@ -336,12 +336,12 @@ sub check_tag_exist
   my ($arg_ref)=@_;
   
   # Check if all necessary arguments are present
-  my $dbh=$arg_ref->{'dbh'} or die "PerlPress::DBAcc::check_tag_exist: Specify database handler!\n";
+  my $dbh=$arg_ref->{'dbh'} or croak "Specify database handler!\n";
   my $tag_id=$arg_ref->{'tag_id'} || -1;
 
   # See: http://stackoverflow.com/questions/6165028/having-an-sql-select-query-how-do-i-get-number-of-items
   my $sth = $dbh->prepare("SELECT COUNT(*) FROM tags WHERE (tag_id=?)");
-  $sth->execute($tag_id) or die "Couldn't execute statement: ".$dbh->errstr;
+  $sth->execute($tag_id) or croak "Couldn't execute statement: ".$dbh->errstr;
   
   return $sth->fetchall_arrayref()->[0][0];
 }
@@ -359,12 +359,12 @@ sub check_short_exist
   my ($arg_ref)=@_;
   
   # Check if all necessary arguments are present
-  my $dbh=$arg_ref->{'dbh'} or die "PerlPress::DBAcc::check_short_exist: Specify database handler!\n";
+  my $dbh=$arg_ref->{'dbh'} or croak "Specify database handler!\n";
   my $short_id=$arg_ref->{'short_id'} || -1;
 
   # See: http://stackoverflow.com/questions/6165028/having-an-sql-select-query-how-do-i-get-number-of-items
   my $sth = $dbh->prepare("SELECT COUNT(*) FROM html_shortcuts WHERE (short_id=?)");
-  $sth->execute($short_id) or die "Couldn't execute statement: ".$dbh->errstr;
+  $sth->execute($short_id) or croak "Couldn't execute statement: ".$dbh->errstr;
   
   return $sth->fetchall_arrayref()->[0][0];
 }
@@ -385,13 +385,13 @@ sub load_art_data
   my ($arg_ref)=@_;
   
   # Check if all necessary arguments are present
-  my $dbh=$arg_ref->{'dbh'} or die "PerlPress::DBAcc::load_art_data: Specify database handler!\n";
-  my $art_id=$arg_ref->{'art_id'} or die "PerlPress::DBAcc::load_art_data: Specify article id!\n";
+  my $dbh=$arg_ref->{'dbh'} or croak "Specify database handler!\n";
+  my $art_id=$arg_ref->{'art_id'} or croak "Specify article id!\n";
   
   # Load the article data from table `articles` and `art_persist`
   my $sth = $dbh->prepare("SELECT * FROM articles WHERE (art_id=?)");
   $sth->execute($art_id)
-    or die "Couldn't execute statement: ".$dbh->errstr;
+    or croak "Couldn't execute statement: ".$dbh->errstr;
   
   my $art=$sth->fetchrow_hashref();
   
@@ -414,12 +414,12 @@ sub load_short_data
   my ($arg_ref)=@_;
   
   # Check if all necessary arguments are present
-  my $dbh=$arg_ref->{'dbh'} or die "PerlPress::DBAcc::load_short_data: Specify database handler!\n";
-  my $short_id=$arg_ref->{'short_id'} or die "PerlPress::DBAcc::load_short_data: Specify shortcut id!\n";
+  my $dbh=$arg_ref->{'dbh'} or croak "Specify database handler!\n";
+  my $short_id=$arg_ref->{'short_id'} or croak "Specify shortcut id!\n";
   
   my $sth = $dbh->prepare("SELECT * FROM html_shortcuts WHERE (short_id=?)");
   $sth->execute($short_id)
-    or die "Couldn't execute statement: ".$dbh->errstr;
+    or croak "Couldn't execute statement: ".$dbh->errstr;
   
   my $short=$sth->fetchrow_hashref();
   
@@ -439,39 +439,45 @@ sub new_art
 	my ($arg_ref)=@_;
   
 	# Check if all necessary arguments are present
-	my $dbh=$arg_ref->{'dbh'} or die "PerlPress::DBAcc::new_art: Specify database handler!\n";
+	my $dbh=$arg_ref->{'dbh'} or croak "Specify database handler!\n";
 		
 	# Save information in table articles
-	my $sth = $dbh->prepare("INSERT INTO articles (title,
-												   subtitle,
-												   author,
-												   intr_text,
-												   full_text,
-												   created,
-												   modified,
-												   type,
-												   link,
-												   status,
-												   notes,
-												   featured)
-							 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+	my $sth = $dbh->prepare(
+	    "INSERT INTO articles (
+            title,
+            subtitle,
+            author,
+            intr_text,
+            full_text,
+            created,
+            modified,
+            type,
+            link,
+            status,
+            notes,
+            featured
+        ) VALUES (
+            ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+        )"
+    );
 
-	$sth->execute("Article title",					# title
-  				  "Article subtitle",				# subtitle
-  				  $ENV{'AUTHOR'},					# author
-													# intr_text
-  				  "<p>This text will be displayed in short view. You can use HTML.</p>",
-													#  full_text
-  				  "<p>This text is only visible in full view of article.</p>",
-  				  PerlPress::Tools::now(),			# created
-  				  PerlPress::Tools::now(),			# modified
-  				  "blog",							# type
-  				  "",								# link (only for type=nav !)
-  				  "draft",							# status
-													# notes
-  				  "Insert your notes here. Will not be published.",
-  				  "no"								# featured
-  			     ) or die "Couldn't execute statement: ".$dbh->errstr;
+    $sth->execute(
+        "Article title",            # title
+        "Article subtitle",         # subtitle
+        $ENV{'AUTHOR'},             # author
+                                    # intr_text
+        "<p>This text will be displayed in short view. You can use HTML.</p>",
+                                    # full_text
+        "<p>This text is only visible in full view of article.</p>",
+        PerlPress::Tools::now(),    # created
+        PerlPress::Tools::now(),    # modified
+        "blog",                     # type
+        "",                         # link (only for type=nav !)
+        "draft",                    # status
+                                    # notes
+        "Insert your notes here. Will not be published.",
+        "no",                       # featured
+    ) or croak "Couldn't execute statement: ".$dbh->errstr;
 
 	# Now, we need the article ID of the new article.
 	# See: http://www.cgicorner.ch/tutor/12_mysql.shtml
@@ -499,20 +505,24 @@ sub new_short
 	my ($arg_ref)=@_;
   
 	# Check if all necessary arguments are present
-	my $dbh=$arg_ref->{'dbh'} or die "PerlPress::DBAcc::new_art: Specify database handler!\n";
+	my $dbh=$arg_ref->{'dbh'} or croak "Specify database handler!\n";
 		
 	# Save information in table html_shortcuts
-	my $sth = $dbh->prepare("INSERT INTO html_shortcuts (descr,
-												   find,
-												   repl,
-												   enabled)
-							 VALUES (?, ?, ?, ?)");
+    my $sth = $dbh->prepare(
+        "INSERT INTO html_shortcuts (
+            descr,
+            find,
+            repl,
+            enabled
+        ) VALUES (?, ?, ?, ?)"
+    );
 
-	$sth->execute("New shortcut",					# title
-  				  "",								# find pattern
-  				  "",								# replace pattern
-  				  "no"								# enabled
-  			     ) or die "Couldn't execute statement: ".$dbh->errstr;
+	$sth->execute(
+        "New shortcut", # title
+        "",             # find pattern
+        "",             # replace pattern
+        "no"            # enabled
+    ) or croak "Couldn't execute statement: ".$dbh->errstr;
 
 	# Now, we need the shortcut ID of the shortcut.
 	# See: http://www.cgicorner.ch/tutor/12_mysql.shtml
@@ -533,13 +543,16 @@ sub new_cat
 	my ($arg_ref)=@_;
   
 	# Check if all necessary arguments are present
-	my $dbh=$arg_ref->{'dbh'} or die "PerlPress::DBAcc::new_cat: Specify database handler!\n";
-	my $cat_name=$arg_ref->{'cat_name'} or die "PerlPress::DBAcc::new_cat: Specify category name!\n";
+	my $dbh=$arg_ref->{'dbh'} or croak "Specify database handler!\n";
+	my $cat_name=$arg_ref->{'cat_name'} or croak "Specify category name!\n";
 	
-	my $sth = $dbh->prepare("INSERT INTO categories (cat_name, alias) VALUES (?, ?)");
-	$sth->execute($cat_name,
-	              PerlPress::Tools::clearstr({ str=>$cat_name, max_len=>$ENV{'MAX_LEN_LINK'} }))
-	  or die "Couldn't execute statement: ".$dbh->errstr;
+    my $sth = $dbh->prepare(
+        "INSERT INTO categories (cat_name, alias) VALUES (?, ?)"
+    );
+	$sth->execute(
+        $cat_name,
+	    PerlPress::Tools::clearstr({ str=>$cat_name, max_len=>$ENV{'MAX_LEN_LINK'} })
+	) or croak "Couldn't execute statement: ".$dbh->errstr;
 	
 	# Now, we need the category ID of the new category.
 	# See: http://www.cgicorner.ch/tutor/12_mysql.shtml
@@ -560,13 +573,16 @@ sub new_tag
 	my ($arg_ref)=@_;
   
 	# Check if all necessary arguments are present
-	my $dbh=$arg_ref->{'dbh'} or die "PerlPress::DBAcc::new_tag: Specify database handler!\n";
-	my $tag_name=$arg_ref->{'tag_name'} or die "PerlPress::DBAcc::new_tag: Specify tag name!\n";
+	my $dbh=$arg_ref->{'dbh'} or croak "Specify database handler!\n";
+	my $tag_name=$arg_ref->{'tag_name'} or croak "Specify tag name!\n";
 	
-	my $sth = $dbh->prepare("INSERT INTO tags (tag_name, alias) VALUES (?, ?)");
-	$sth->execute($tag_name,
-				  PerlPress::Tools::clearstr({ str=>$tag_name, max_len=>$ENV{'MAX_LEN_LINK'} }))
-	  or die "Couldn't execute statement: ".$dbh->errstr;
+	my $sth = $dbh->prepare(
+        "INSERT INTO tags (tag_name, alias) VALUES (?, ?)"
+    );
+    $sth->execute(
+        $tag_name,
+        PerlPress::Tools::clearstr({ str=>$tag_name, max_len=>$ENV{'MAX_LEN_LINK'} })
+    ) or croak "Couldn't execute statement: ".$dbh->errstr;
 	
 	# Now, we need the tag ID of the new tag.
 	# See: http://www.cgicorner.ch/tutor/12_mysql.shtml
@@ -587,37 +603,40 @@ sub update_art
 	my ($arg_ref)=@_;
   
 	# Check if all necessary arguments are present
-	my $dbh=$arg_ref->{'dbh'} or die "PerlPress::DBAcc::update_art: Specify database handler!\n";
-	my $art=$arg_ref->{'art'} or die "PerlPress::DBAcc::update_art: Specify article data!\n";
+	my $dbh=$arg_ref->{'dbh'} or croak "Specify database handler!\n";
+	my $art=$arg_ref->{'art'} or croak "Specify article data!\n";
 		
 	# Update article data in table articles
-    my $sth = $dbh->prepare("UPDATE articles
-  						     SET title = ?,
-						       subtitle = ?,
-						       author = ?,
-						       intr_text = ?,
-						       full_text = ?,
-						       created = ?,
-						       modified = ?,
-						       type = ?,
-						       link = ?,
-						       status = ?,
-						       notes = ?
-						     WHERE art_id = ?");
+    my $sth = $dbh->prepare(
+        "UPDATE articles SET
+            title = ?,
+            subtitle = ?,
+            author = ?,
+            intr_text = ?,
+            full_text = ?,
+            created = ?,
+            modified = ?,
+            type = ?,
+            link = ?,
+            status = ?,
+            notes = ?
+        WHERE art_id = ?"
+    );
 	
-	$sth->execute($art->{'title'},
-  				  $art->{'subtitle'},
-  				  $art->{'author'},
-  				  $art->{'intr_text'},
-  				  $art->{'full_text'},
-  				  $art->{'created'},
-  				  $art->{'modified'},
-  				  $art->{'type'},
-  				  $art->{'link'},
-  				  $art->{'status'},
-  				  $art->{'notes'},
-  				  $art->{'art_id'}
-  			     ) or die "Couldn't execute statement: ".$dbh->errstr;
+    $sth->execute(
+        $art->{'title'},
+        $art->{'subtitle'},
+        $art->{'author'},
+        $art->{'intr_text'},
+        $art->{'full_text'},
+        $art->{'created'},
+        $art->{'modified'},
+        $art->{'type'},
+        $art->{'link'},
+        $art->{'status'},
+        $art->{'notes'},
+        $art->{'art_id'}
+    ) or croak "Couldn't execute statement: ".$dbh->errstr;
 
 	# Create persistent article data (alias, filename, uuid) if not yet
 	# set (=empty). Persistent data is deduced from other article data
@@ -626,28 +645,42 @@ sub update_art
 	# "article data update" with the first user inputs, the persistent
 	# data has to be created. If data is already set, leave it
 	# untouched, even if title or any other data changes:
-	my $sth2=$dbh->prepare("SELECT COUNT(*) FROM articles WHERE (art_id=? AND uuid=\"\")");
+    my $sth2=$dbh->prepare(
+        "SELECT COUNT(*) FROM articles WHERE (art_id=? AND uuid=\"\")"
+    );
 	$sth2->execute($art->{'art_id'})
-	  or die "Couldn't execute statement: ".$dbh->errstr;
+	    or croak "Couldn't execute statement: ".$dbh->errstr;
 	if ($sth2->fetchall_arrayref()->[0][0])
 	{
-		my $alias=PerlPress::Tools::clearstr({ str=>$art->{'title'},
-												 max_len=>$ENV{'MAX_LEN_LINK'} });
+		my $alias=PerlPress::Tools::clearstr({
+		    str=>$art->{'title'},
+            max_len=>$ENV{'MAX_LEN_LINK'} }
+        );
 		my $filename=$art->{'art_id'}."_".$alias.".html";
 		my $ug = new Data::UUID;
 		my $uuid=$ug->create_from_name_str($ENV{'BASE_URL'}, $filename);
-		my $sth3=$dbh->prepare("UPDATE `articles` \n
-		  SET alias = ?,
-		    filename = ?,
-		    uuid = ?
-		  WHERE art_id = ?");
-		$sth3->execute($alias, $filename, $uuid, $art->{'art_id'})
-		  or die "Couldn't execute statement: ".$dbh->errstr;
-	}
+        my $sth3=$dbh->prepare(
+		    "UPDATE `articles` SET
+                alias = ?,
+                filename = ?,
+                uuid = ?
+            WHERE art_id = ?"
+        );
+		$sth3->execute(
+            $alias,
+            $filename,
+            $uuid,
+            $art->{'art_id'}
+        ) or croak "Couldn't execute statement: ".$dbh->errstr;
+    }
 
 	# Categories
-	$sth=$dbh->prepare("DELETE FROM art_cat WHERE art_id=?");
-	$sth->execute($art->{'art_id'}) or die "Couldn't execute statement: ".$dbh->errstr;
+	$sth=$dbh->prepare(
+        "DELETE FROM art_cat WHERE art_id=?"
+        );
+    $sth->execute(
+        $art->{'art_id'}
+    ) or croak "Couldn't execute statement: ".$dbh->errstr;
 	
 	my @cat_names=@{$art->{'cat_names'}};
 	my @cat_ids=@{$art->{'cat_ids'}};
@@ -657,43 +690,84 @@ sub update_art
 		if ($cat_ids[$c]==-1) # Unexisting category
 		{
 			# Create category
-			my $cat_alias=PerlPress::Tools::clearstr({ str=>$cat_names[$c], max_len=>$ENV{'MAX_LEN_LINK'} });
-			$sth=$dbh->prepare("INSERT INTO categories (cat_name, alias) VALUES (?, ?)");
-			$sth->execute($cat_names[$c], $cat_alias) or die "Couldn't execute statement: ".$dbh->errstr;
+            my $cat_alias=PerlPress::Tools::clearstr({
+                str=>$cat_names[$c],
+                max_len=>$ENV{'MAX_LEN_LINK'} }
+            );
+            $sth=$dbh->prepare(
+                "INSERT INTO categories (
+                    cat_name,
+                    alias
+                ) VALUES (?, ?)"
+            );
+            $sth->execute(
+                $cat_names[$c],
+                $cat_alias
+            ) or croak "Couldn't execute statement: ".$dbh->errstr;
 			# Now, we need the category ID of the new category
 			# See: http://www.cgicorner.ch/tutor/12_mysql.shtml
 			$cat_ids[$c]=$dbh->{'mysql_insertid'};
 		}
 		
 		# Link the article to the category
-		$sth=$dbh->prepare("INSERT INTO art_cat (art_id, cat_id) VALUES (?, ?)");
-		$sth->execute($art->{'art_id'}, $cat_ids[$c]) or die "Couldn't execute statement: ".$dbh->errstr;
+        $sth=$dbh->prepare(
+            "INSERT INTO art_cat (
+                art_id,
+                cat_id
+            ) VALUES (?, ?)"
+        );
+        $sth->execute(
+            $art->{'art_id'},
+            $cat_ids[$c]
+        ) or croak "Couldn't execute statement: ".$dbh->errstr;
 	}
 	
-	# Tags
-	$sth=$dbh->prepare("DELETE FROM art_tag WHERE art_id=?");
-	$sth->execute($art->{'art_id'}) or die "Couldn't execute statement: ".$dbh->errstr;
+    # Tags
+    $sth=$dbh->prepare(
+        "DELETE FROM art_tag WHERE art_id=?"
+    );
+	$sth->execute($art->{'art_id'}) or 
+	    croak "Couldn't execute statement: ".$dbh->errstr;
 	
 	my @tag_names=@{$art->{'tag_names'}};
 	my @tag_ids=@{$art->{'tag_ids'}};
 
-	foreach my $t (0 .. $#tag_names)
-	{
-		if ($tag_ids[$t]==-1) # Unexisting tag
-		{
-			# Create tag
-			my $tag_alias=PerlPress::Tools::clearstr({ str=>$tag_names[$t], max_len=>$ENV{'MAX_LEN_LINK'} });
-			$sth=$dbh->prepare("INSERT INTO tags (tag_name, alias) VALUES (?, ?)");
-			$sth->execute($tag_names[$t], $tag_alias) or die "Couldn't execute statement: ".$dbh->errstr;
-			# Now, we need the tag ID of the new tag
-			# See: http://www.cgicorner.ch/tutor/12_mysql.shtml
-			$tag_ids[$t]=$dbh->{'mysql_insertid'};
-		}
+    foreach my $t (0 .. $#tag_names)
+    {
+        if ($tag_ids[$t]==-1) # Unexisting tag
+        {
+            # Create tag
+            my $tag_alias=PerlPress::Tools::clearstr({
+                str=>$tag_names[$t],
+                max_len=>$ENV{'MAX_LEN_LINK'}
+            });
+            $sth=$dbh->prepare(
+                "INSERT INTO tags (
+                    tag_name,
+                    alias
+                ) VALUES (?, ?)"
+            );
+            $sth->execute(
+                $tag_names[$t],
+                $tag_alias
+            ) or croak "Couldn't execute statement: ".$dbh->errstr;
+            # Now, we need the tag ID of the new tag
+            # See: http://www.cgicorner.ch/tutor/12_mysql.shtml
+            $tag_ids[$t]=$dbh->{'mysql_insertid'};
+        }
 		
-		# Link the article to the tag
-		$sth=$dbh->prepare("INSERT INTO art_tag (art_id, tag_id) VALUES (?, ?)");
-		$sth->execute($art->{'art_id'}, $tag_ids[$t]) or die "Couldn't execute statement: ".$dbh->errstr;
-	}
+        # Link the article to the tag
+        $sth=$dbh->prepare(
+            "INSERT INTO art_tag (
+                art_id,
+                tag_id
+            ) VALUES (?, ?)"
+        );
+        $sth->execute(
+            $art->{'art_id'},
+            $tag_ids[$t]
+        ) or croak "Couldn't execute statement: ".$dbh->errstr;
+    }
 }
 
 =head2 update_short
@@ -704,27 +778,30 @@ Update HTML shortcut information in database.
 
 sub update_short
 {
-	# Get a reference to a hash containing the routine's arguments
-	my ($arg_ref)=@_;
+    # Get a reference to a hash containing the routine's arguments
+    my ($arg_ref)=@_;
   
-	# Check if all necessary arguments are present
-	my $dbh=$arg_ref->{'dbh'} or die "PerlPress::DBAcc::update_short: Specify database handler!\n";
-	my $short=$arg_ref->{'short'} or die "PerlPress::DBAcc::update_short: Specify shortcut data!\n";
+    # Check if all necessary arguments are present
+    my $dbh=$arg_ref->{'dbh'} or croak "Specify database handler!\n";
+    my $short=$arg_ref->{'short'} or croak "Specify shortcut data!\n";
 		
-	# Update HTML shortcut data in table html_shortcuts
-	my $sth = $dbh->prepare("UPDATE html_shortcuts
-  						     SET descr = ?,
-						       find = ?,
-						       repl = ?,
-						       enabled = ?
-						     WHERE short_id = ?");
+    # Update HTML shortcut data in table html_shortcuts
+    my $sth = $dbh->prepare(
+        "UPDATE html_shortcuts SET
+            descr = ?,
+            find = ?,
+            repl = ?,
+            enabled = ?
+        WHERE short_id = ?"
+    );
 	
-	$sth->execute($short->{'descr'},
-  				  $short->{'find'},
-  				  $short->{'repl'},
-  				  $short->{'enabled'},
-  				  $short->{'short_id'}
-  			     ) or die "Couldn't execute statement: ".$dbh->errstr;
+    $sth->execute(
+        $short->{'descr'},
+        $short->{'find'},
+        $short->{'repl'},
+        $short->{'enabled'},
+        $short->{'short_id'}
+    ) or croak "Couldn't execute statement: ".$dbh->errstr;
 }
 
 =head2 update_cat
@@ -735,21 +812,28 @@ Update category information in database.
 
 sub update_cat
 {
-	# Get a reference to a hash containing the routine's arguments
-	my ($arg_ref)=@_;
+    # Get a reference to a hash containing the routine's arguments
+    my ($arg_ref)=@_;
   
-	# Check if all necessary arguments are present
-	my $dbh=$arg_ref->{'dbh'} or die "PerlPress::DBAcc::update_cat: Specify database handler!\n";
-	my $cat=$arg_ref->{'cat'} or die "PerlPress::DBAcc::update_cat: Specify category data!\n";
+    # Check if all necessary arguments are present
+    my $dbh=$arg_ref->{'dbh'} or croak "Specify database handler!\n";
+    my $cat=$arg_ref->{'cat'} or croak "Specify category data!\n";
 		
-	# Update category data in table categories
-	my $sth = $dbh->prepare("UPDATE categories
-  						     SET cat_name = ?, alias = ? WHERE cat_id = ?");
+    # Update category data in table categories
+    my $sth = $dbh->prepare(
+    "UPDATE categories SET
+        cat_name = ?,
+        alias = ?
+     WHERE cat_id = ?");
 	
-	$sth->execute($cat->{'cat_name'},
-				  PerlPress::Tools::clearstr({ str=>$cat->{'cat_name'}, max_len=>$ENV{'MAX_LEN_LINK'} }),
-  				  $cat->{'cat_id'}
-  			     ) or die "Couldn't execute statement: ".$dbh->errstr;
+    $sth->execute(
+        $cat->{'cat_name'},
+        PerlPress::Tools::clearstr({
+            str=>$cat->{'cat_name'},
+            max_len=>$ENV{'MAX_LEN_LINK'}
+        }),
+        $cat->{'cat_id'}
+    ) or croak "Couldn't execute statement: ".$dbh->errstr;
 }
 
 =head2 update_tag
@@ -760,21 +844,29 @@ Update tag information in database.
 
 sub update_tag
 {
-	# Get a reference to a hash containing the routine's arguments
-	my ($arg_ref)=@_;
+    # Get a reference to a hash containing the routine's arguments
+    my ($arg_ref)=@_;
   
-	# Check if all necessary arguments are present
-	my $dbh=$arg_ref->{'dbh'} or die "PerlPress::DBAcc::update_tag: Specify database handler!\n";
-	my $tag=$arg_ref->{'tag'} or die "PerlPress::DBAcc::update_tag: Specify tag data!\n";
+    # Check if all necessary arguments are present
+    my $dbh=$arg_ref->{'dbh'} or croak "Specify database handler!\n";
+    my $tag=$arg_ref->{'tag'} or croak "Specify tag data!\n";
 		
-	# Update category data in table tags
-	my $sth = $dbh->prepare("UPDATE tags
-  						     SET tag_name = ?, alias = ? WHERE tag_id = ?");
+    # Update category data in table tags
+    my $sth = $dbh->prepare(
+        "UPDATE tags SET
+            tag_name = ?,
+            alias = ?
+        WHERE tag_id = ?"
+    );
 	
-	$sth->execute($tag->{'tag_name'},
-				  PerlPress::Tools::clearstr({ str=>$tag->{'tag_name'}, max_len=>$ENV{'MAX_LEN_LINK'} }),
-  				  $tag->{'tag_id'}
-  			     ) or die "Couldn't execute statement: ".$dbh->errstr;
+    $sth->execute(
+        $tag->{'tag_name'},
+        PerlPress::Tools::clearstr({
+            str=>$tag->{'tag_name'},
+            max_len=>$ENV{'MAX_LEN_LINK'}
+        }),
+        $tag->{'tag_id'}
+    ) or croak "Couldn't execute statement: ".$dbh->errstr;
 }
 
 =head2 get_art_cat_ids
@@ -793,28 +885,30 @@ its article id (art_id).
 
 sub get_art_cat_ids
 {
-  # Get a reference to a hash containing the routine's arguments
-  my ($arg_ref)=@_;
+    # Get a reference to a hash containing the routine's arguments
+    my ($arg_ref)=@_;
   
-  # Check if all necessary arguments are present
-  my $dbh=$arg_ref->{'dbh'} or die "PerlPress::DBAcc::get_art_cat_ids: Specify database handler!\n";
-  my $art_id=$arg_ref->{'art_id'} or die "PerlPress::DBAcc::get_art_cat_ids: Specify article id!\n";
+    # Check if all necessary arguments are present
+    my $dbh=$arg_ref->{'dbh'} or croak "Specify database handler!\n";
+    my $art_id=$arg_ref->{'art_id'} or croak "Specify article id!\n";
   
-  my $sth = $dbh->prepare("SELECT cat_id FROM art_cat WHERE (art_id=?)");
-  $sth->execute($art_id)
-    or die "Couldn't execute statement: ".$dbh->errstr;
+    my $sth = $dbh->prepare(
+        "SELECT cat_id FROM art_cat WHERE (art_id=?)"
+    );
+    $sth->execute($art_id)
+        or croak "Couldn't execute statement: ".$dbh->errstr;
   
-  my $cat_ids=$sth->fetchall_arrayref([0]);
+    my $cat_ids=$sth->fetchall_arrayref([0]);
   
-  # $cat_ids is a array ref of array ref. Convert to array
-  my @cat_ids2;
-  foreach my $c (@{$cat_ids})
-  {
-    push @cat_ids2, @{$c}[0];
-  }
+    # $cat_ids is a array ref of array ref. Convert to array
+    my @cat_ids2;
+    foreach my $c (@{$cat_ids})
+    {
+        push @cat_ids2, @{$c}[0];
+    }
   
-  # Return the array ref
-  return \@cat_ids2;
+    # Return the array ref
+    return \@cat_ids2;
 }
 
 =head2 get_cat_name
@@ -825,24 +919,26 @@ Get the category name by cat_id.
 
 sub get_cat_name
 {
-	# Get a reference to a hash containing the routine's arguments
-	my ($arg_ref)=@_;
+    # Get a reference to a hash containing the routine's arguments
+    my ($arg_ref)=@_;
   
-	# Check if all necessary arguments are present
-	my $dbh=$arg_ref->{'dbh'} or die "PerlPress::DBAcc::get_cat_name: Specify database handler!\n";
-	my $cat_id=$arg_ref->{'cat_id'} or die "PerlPress::DBAcc::get_cat_name: Specify cat id!\n";
+    # Check if all necessary arguments are present
+    my $dbh=$arg_ref->{'dbh'} or croak "Specify database handler!\n";
+    my $cat_id=$arg_ref->{'cat_id'} or croak "Specify cat id!\n";
 	
-	my @cat_names;
-	my $sth;
-	foreach my $id (@{$cat_id})
-	{
-		$sth = $dbh->prepare("SELECT cat_name FROM categories WHERE (cat_id=?)");
-		$sth->execute($id)
-		  or die "Couldn't execute statement: ".$dbh->errstr;
-		my $name=$sth->fetchrow_hashref();
-		push @cat_names, $name->{'cat_name'};
-	}
-	return \@cat_names;
+    my @cat_names;
+    my $sth;
+    foreach my $id (@{$cat_id})
+    {
+        $sth = $dbh->prepare(
+            "SELECT cat_name FROM categories WHERE (cat_id=?)"
+        );
+        $sth->execute($id)
+            or croak "Couldn't execute statement: ".$dbh->errstr;
+        my $name=$sth->fetchrow_hashref();
+        push @cat_names, $name->{'cat_name'};
+    }
+    return \@cat_names;
 }
 
 =head2 get_cat_alias
@@ -853,24 +949,25 @@ Get the category alias by cat_id.
 
 sub get_cat_alias
 {
-	# Get a reference to a hash containing the routine's arguments
-	my ($arg_ref)=@_;
+    # Get a reference to a hash containing the routine's arguments
+    my ($arg_ref)=@_;
   
-	# Check if all necessary arguments are present
-	my $dbh=$arg_ref->{'dbh'} or die "PerlPress::DBAcc::get_cat_alias: Specify database handler!\n";
-	my $cat_id=$arg_ref->{'cat_id'} or die "PerlPress::DBAcc::get_cat_alias: Specify cat id!\n";
-	
-	my @cat_alias;
-	my $sth;
-	foreach my $id (@{$cat_id})
-	{
-		$sth = $dbh->prepare("SELECT alias FROM categories WHERE (cat_id=?)");
-		$sth->execute($id)
-		  or die "Couldn't execute statement: ".$dbh->errstr;
-		my $alias=$sth->fetchrow_hashref();
-		push @cat_alias, $alias->{'alias'};
-	}
-	return \@cat_alias;
+    # Check if all necessary arguments are present
+    my $dbh=$arg_ref->{'dbh'} or croak "Specify database handler!\n";
+    my $cat_id=$arg_ref->{'cat_id'} or craok "Specify cat id!\n";
+    
+    my @cat_alias;
+    my $sth;
+    foreach my $id (@{$cat_id})
+    {
+        $sth = $dbh->prepare(
+            "SELECT alias FROM categories WHERE (cat_id=?)");
+        $sth->execute($id)
+            or croak "Couldn't execute statement: ".$dbh->errstr;
+        my $alias=$sth->fetchrow_hashref();
+        push @cat_alias, $alias->{'alias'};
+    }
+    return \@cat_alias;
 }
 
 =head2 get_tag_alias
@@ -881,24 +978,24 @@ Get the tag alias by tag_id.
 
 sub get_tag_alias
 {
-	# Get a reference to a hash containing the routine's arguments
-	my ($arg_ref)=@_;
+    # Get a reference to a hash containing the routine's arguments
+    my ($arg_ref)=@_;
   
-	# Check if all necessary arguments are present
-	my $dbh=$arg_ref->{'dbh'} or die "PerlPress::DBAcc::get_tag_alias: Specify database handler!\n";
-	my $tag_id=$arg_ref->{'tag_id'} or die "PerlPress::DBAcc::get_tag_alias: Specify cat id!\n";
-	
-	my @tag_alias;
-	my $sth;
-	foreach my $id (@{$tag_id})
-	{
-		$sth = $dbh->prepare("SELECT alias FROM tags WHERE (tag_id=?)");
-		$sth->execute($id)
-		  or die "Couldn't execute statement: ".$dbh->errstr;
-		my $alias=$sth->fetchrow_hashref();
-		push @tag_alias, $alias->{'alias'};
-	}
-	return \@tag_alias;
+    # Check if all necessary arguments are present
+    my $dbh=$arg_ref->{'dbh'} or croak "Specify database handler!\n";
+    my $tag_id=$arg_ref->{'tag_id'} or craok "Specify cat id!\n";
+    
+    my @tag_alias;
+    my $sth;
+    foreach my $id (@{$tag_id})
+    {
+        $sth = $dbh->prepare("SELECT alias FROM tags WHERE (tag_id=?)");
+        $sth->execute($id)
+            or croak "Couldn't execute statement: ".$dbh->errstr;
+        my $alias=$sth->fetchrow_hashref();
+        push @tag_alias, $alias->{'alias'};
+    }
+    return \@tag_alias;
 }
 
 =head2 get_tag_name
@@ -909,24 +1006,26 @@ Get the tag name by tag_id.
 
 sub get_tag_name
 {
-	# Get a reference to a hash containing the routine's arguments
-	my ($arg_ref)=@_;
-  
-	# Check if all necessary arguments are present
-	my $dbh=$arg_ref->{'dbh'} or die "PerlPress::DBAcc::get_tag_name: Specify database handler!\n";
-	my $tag_id=$arg_ref->{'tag_id'} or die "PerlPress::DBAcc::get_tag_name: Specify cat id!\n";
-	
-	my @tag_names;
-	my $sth;
-	foreach my $id (@{$tag_id})
-	{
-		$sth = $dbh->prepare("SELECT tag_name FROM tags WHERE (tag_id=?)");
-		$sth->execute($id)
-		  or die "Couldn't execute statement: ".$dbh->errstr;
-		my $name=$sth->fetchrow_hashref();
-		push @tag_names, $name->{'tag_name'};
-	}
-	return \@tag_names;
+    # Get a reference to a hash containing the routine's arguments
+    my ($arg_ref)=@_;
+    
+    # Check if all necessary arguments are present
+    my $dbh=$arg_ref->{'dbh'} or croak "Specify database handler!\n";
+    my $tag_id=$arg_ref->{'tag_id'} or croak "Specify cat id!\n";
+    
+    my @tag_names;
+    my $sth;
+    foreach my $id (@{$tag_id})
+    {
+        $sth = $dbh->prepare(
+            "SELECT tag_name FROM tags WHERE (tag_id=?)"
+        );
+        $sth->execute($id)
+            or croak "Couldn't execute statement: ".$dbh->errstr;
+        my $name=$sth->fetchrow_hashref();
+        push @tag_names, $name->{'tag_name'};
+    }
+    return \@tag_names;
 }
 
 =head2 get_short_descr
@@ -937,17 +1036,21 @@ Get the description of a HTML shortcut given by its shortcut id.
 
 sub get_short_descr
 {
-	# Get a reference to a hash containing the routine's arguments
-	my ($arg_ref)=@_;
-  
-	# Check if all necessary arguments are present
-	my $dbh=$arg_ref->{'dbh'} or die "PerlPress::DBAcc::get_short_descr: Specify database handler!\n";
-	my $short_id=$arg_ref->{'short_id'} or die "PerlPress::DBAcc::get_short_descr: Specify shortcut id!\n";
-	
-	my $sth = $dbh->prepare("SELECT descr FROM html_shortcuts WHERE (short_id=?)");
-	$sth->execute($short_id) or die "Couldn't execute statement: ".$dbh->errstr;
-	$sth->fetchrow_hashref();
-	return $sth->{'descr'};
+    # Get a reference to a hash containing the routine's arguments
+    my ($arg_ref)=@_;
+    
+    # Check if all necessary arguments are present
+
+    my $dbh=$arg_ref->{'dbh'} or croak "Specify database handler!\n";
+    my $short_id=$arg_ref->{'short_id'} or croak "Specify shortcut id!\n";
+    
+    my $sth = $dbh->prepare(
+        "SELECT descr FROM html_shortcuts WHERE (short_id=?)"
+    );
+    $sth->execute($short_id)
+        or croak "Couldn't execute statement: ".$dbh->errstr;
+    $sth->fetchrow_hashref();
+    return $sth->{'descr'};
 }
 
 =head2 get_cat_id
@@ -959,37 +1062,41 @@ return -1.
 
 sub get_cat_id
 {
-	# Get a reference to a hash containing the routine's arguments
-	my ($arg_ref)=@_;
-  
-	# Check if all necessary arguments are present
-	my $dbh=$arg_ref->{'dbh'} or die "PerlPress::DBAcc::get_cat_id: Specify database handler!\n";
-	my $cat_name=$arg_ref->{'cat_name'} or die "PerlPress::DBAcc::get_cat_id: Specify cat name!\n";
-	
-	my @cat_ids;
-	my $sth;
-	my $ex;
-	foreach my $name (@{$cat_name})
-	{
-		# First, check if category with $name exists in database
-		$sth = $dbh->prepare("SELECT COUNT(*) FROM categories WHERE (cat_name=?)");
-		$sth->execute($name)
-		  or die "Couldn't execute statement: ".$dbh->errstr;
-		# If category exist then $ex=1, else $ex=0
-		$ex=$sth->fetchall_arrayref()->[0][0];
-		if ($ex)
-		{
-			$sth = $dbh->prepare("SELECT cat_id FROM categories WHERE (cat_name=?)");
-			$sth->execute($name)
-			  or die "Couldn't execute statement: ".$dbh->errstr;
-			my $id=$sth->fetchrow_hashref();
-			push @cat_ids, $id->{'cat_id'};
-		} else
-		{
-			push @cat_ids, -1;
-		}
-	}
-	return \@cat_ids;
+    # Get a reference to a hash containing the routine's arguments
+    my ($arg_ref)=@_;
+    
+    # Check if all necessary arguments are present
+    my $dbh=$arg_ref->{'dbh'} or croak "Specify database handler!\n";
+    my $cat_name=$arg_ref->{'cat_name'} or croak "Specify cat name!\n";
+    
+    my @cat_ids;
+    my $sth;
+    my $ex;
+    foreach my $name (@{$cat_name})
+    {
+        # First, check if category with $name exists in database
+        $sth = $dbh->prepare(
+            "SELECT COUNT(*) FROM categories WHERE (cat_name=?)"
+        );
+        $sth->execute($name)
+            or croak "Couldn't execute statement: ".$dbh->errstr;
+        # If category exist then $ex=1, else $ex=0
+        $ex=$sth->fetchall_arrayref()->[0][0];
+        if ($ex)
+        {
+            $sth = $dbh->prepare(
+                "SELECT cat_id FROM categories WHERE (cat_name=?)"
+            );
+            $sth->execute($name)
+                or croak "Couldn't execute statement: ".$dbh->errstr;
+            my $id=$sth->fetchrow_hashref();
+            push @cat_ids, $id->{'cat_id'};
+        } else
+        {
+            push @cat_ids, -1;
+        }
+    }
+    return \@cat_ids;
 }
 
 =head2 get_art_tag_ids
@@ -1008,28 +1115,30 @@ its article id (art_id).
 
 sub get_art_tag_ids
 {
-  # Get a reference to a hash containing the routine's arguments
-  my ($arg_ref)=@_;
-  
-  # Check if all necessary arguments are present
-  my $dbh=$arg_ref->{'dbh'} or die "PerlPress::DBAcc::get_art_tag_ids: Specify database handler!\n";
-  my $art_id=$arg_ref->{'art_id'} or die "PerlPress::DBAcc::get_art_tag_ids: Specify article id!\n";
-  
-  my $sth = $dbh->prepare("SELECT tag_id FROM art_tag WHERE (art_id=?)");
-  $sth->execute($art_id)
-    or die "Couldn't execute statement: ".$dbh->errstr;
-  
-  my $tag_ids=$sth->fetchall_arrayref([0]);
-  
-  # $tag_ids is a array ref of array ref. Convert to array
-  my @tag_ids2;
-  foreach my $c (@{$tag_ids})
-  {
-    push @tag_ids2, @{$c}[0];
-  }
-  
-  # Return the array ref
-  return \@tag_ids2;
+    # Get a reference to a hash containing the routine's arguments
+    my ($arg_ref)=@_;
+    
+    # Check if all necessary arguments are present
+    my $dbh=$arg_ref->{'dbh'} or croak "Specify database handler!\n";
+    my $art_id=$arg_ref->{'art_id'} or croak "Specify article id!\n";
+    
+    my $sth = $dbh->prepare(
+        "SELECT tag_id FROM art_tag WHERE (art_id=?)"
+    );
+    $sth->execute($art_id)
+        or croak "Couldn't execute statement: ".$dbh->errstr;
+    
+    my $tag_ids=$sth->fetchall_arrayref([0]);
+    
+    # $tag_ids is a array ref of array ref. Convert to array
+    my @tag_ids2;
+    foreach my $c (@{$tag_ids})
+    {
+        push @tag_ids2, @{$c}[0];
+    }
+    
+    # Return the array ref
+    return \@tag_ids2;
 }
 
 #=head2 get_tag_name
@@ -1068,37 +1177,41 @@ Get the tag id by tag_name. If the tag does not exist, return -1.
 
 sub get_tag_id
 {
-	# Get a reference to a hash containing the routine's arguments
-	my ($arg_ref)=@_;
-  
-	# Check if all necessary arguments are present
-	my $dbh=$arg_ref->{'dbh'} or die "PerlPress::DBAcc::get_tag_id: Specify database handler!\n";
-	my $tag_name=$arg_ref->{'tag_name'} or die "PerlPress::DBAcc::get_tag_id: Specify tag name!\n";
-	
-	my @tag_ids;
-	my $sth;
-	my $ex;
-	foreach my $name (@{$tag_name})
-	{
-		# First, check if tag with $name exists in database
-		$sth = $dbh->prepare("SELECT COUNT(*) FROM tags WHERE (tag_name=?)");
-		$sth->execute($name)
-		  or die "Couldn't execute statement: ".$dbh->errstr;
-		# If tag exist then $ex=1, else $ex=0
-		$ex=$sth->fetchall_arrayref()->[0][0];
-		if ($ex)
-		{
-			$sth = $dbh->prepare("SELECT tag_id FROM tags WHERE (tag_name=?)");
-			$sth->execute($name)
-			  or die "Couldn't execute statement: ".$dbh->errstr;
-			my $id=$sth->fetchrow_hashref();
-			push @tag_ids, $id->{'tag_id'};
-		} else
-		{
-			push @tag_ids, -1;
-		}
-	}
-	return \@tag_ids;
+    # Get a reference to a hash containing the routine's arguments
+    my ($arg_ref)=@_;
+    
+    # Check if all necessary arguments are present
+    my $dbh=$arg_ref->{'dbh'} or croak "Specify database handler!\n";
+    my $tag_name=$arg_ref->{'tag_name'} or croak "Specify tag name!\n";
+    
+    my @tag_ids;
+    my $sth;
+    my $ex;
+    foreach my $name (@{$tag_name})
+    {
+        # First, check if tag with $name exists in database
+        $sth = $dbh->prepare(
+            "SELECT COUNT(*) FROM tags WHERE (tag_name=?)"
+        );
+        $sth->execute($name)
+            or croak "Couldn't execute statement: ".$dbh->errstr;
+        # If tag exist then $ex=1, else $ex=0
+        $ex=$sth->fetchall_arrayref()->[0][0];
+        if ($ex)
+        {
+            $sth = $dbh->prepare(
+                "SELECT tag_id FROM tags WHERE (tag_name=?)"
+            );
+            $sth->execute($name)
+                or croak "Couldn't execute statement: ".$dbh->errstr;
+            my $id=$sth->fetchrow_hashref();
+            push @tag_ids, $id->{'tag_id'};
+        } else
+        {
+            push @tag_ids, -1;
+        }
+    }
+    return \@tag_ids;
 }
 
 =head2 rm_cat
@@ -1109,20 +1222,22 @@ Delete a category from the database.
 
 sub rm_cat
 {
-	# Get a reference to a hash containing the routine's arguments
-	my ($arg_ref)=@_;
-  
-	# Check if all necessary arguments are present
-	my $dbh=$arg_ref->{'dbh'} or die "PerlPress::DBAcc::rm_cat: Specify database handler!\n";
-	my $cat_id=$arg_ref->{'cat_id'} or die "PerlPress::DBAcc::rm_cat: Specify category id!\n";
-	
-	# Delete from table categories
-	my $sth=$dbh->prepare("DELETE FROM categories WHERE cat_id=?");
-	$sth->execute($cat_id) or die "Couldn't execute statement: ".$dbh->errstr;
-	
-	# Delete from table art_cat
-	$sth=$dbh->prepare("DELETE FROM art_cat WHERE cat_id=?");
-	$sth->execute($cat_id) or die "Couldn't execute statement: ".$dbh->errstr;
+    # Get a reference to a hash containing the routine's arguments
+    my ($arg_ref)=@_;
+    
+    # Check if all necessary arguments are present
+    my $dbh=$arg_ref->{'dbh'} or croak "Specify database handler!\n";
+    my $cat_id=$arg_ref->{'cat_id'} or croak "Specify category id!\n";
+    
+    # Delete from table categories
+    my $sth=$dbh->prepare("DELETE FROM categories WHERE cat_id=?");
+    $sth->execute($cat_id)
+        or croak "Couldn't execute statement: ".$dbh->errstr;
+    
+    # Delete from table art_cat
+    $sth=$dbh->prepare("DELETE FROM art_cat WHERE cat_id=?");
+    $sth->execute($cat_id)
+        or croak "Couldn't execute statement: ".$dbh->errstr;
 }
 
 =head2 rm_tag
@@ -1133,20 +1248,22 @@ Delete a tag from the database.
 
 sub rm_tag
 {
-	# Get a reference to a hash containing the routine's arguments
-	my ($arg_ref)=@_;
-  
-	# Check if all necessary arguments are present
-	my $dbh=$arg_ref->{'dbh'} or die "PerlPress::DBAcc::rm_tag: Specify database handler!\n";
-	my $tag_id=$arg_ref->{'tag_id'} or die "PerlPress::DBAcc::rm_tag: Specify tag id!\n";
-	
-	# Delete from table tags
-	my $sth=$dbh->prepare("DELETE FROM tags WHERE tag_id=?");
-	$sth->execute($tag_id) or die "Couldn't execute statement: ".$dbh->errstr;
-	
-	# Delete from table art_tag
-	$sth=$dbh->prepare("DELETE FROM art_tag WHERE tag_id=?");
-	$sth->execute($tag_id) or die "Couldn't execute statement: ".$dbh->errstr;
+    # Get a reference to a hash containing the routine's arguments
+    my ($arg_ref)=@_;
+    
+    # Check if all necessary arguments are present
+    my $dbh=$arg_ref->{'dbh'} or croak "Specify database handler!\n";
+    my $tag_id=$arg_ref->{'tag_id'} or croak "Specify tag id!\n";
+    
+    # Delete from table tags
+    my $sth=$dbh->prepare("DELETE FROM tags WHERE tag_id=?");
+    $sth->execute($tag_id)
+        or croak "Couldn't execute statement: ".$dbh->errstr;
+    
+    # Delete from table art_tag
+    $sth=$dbh->prepare("DELETE FROM art_tag WHERE tag_id=?");
+    $sth->execute($tag_id)
+        or croak "Couldn't execute statement: ".$dbh->errstr;
 }
 
 =head2 rm_short
@@ -1157,16 +1274,17 @@ Delete a HTML shortcut from the database.
 
 sub rm_short
 {
-	# Get a reference to a hash containing the routine's arguments
-	my ($arg_ref)=@_;
-  
-	# Check if all necessary arguments are present
-	my $dbh=$arg_ref->{'dbh'} or die "PerlPress::DBAcc::rm_short: Specify database handler!\n";
-	my $short_id=$arg_ref->{'short_id'} or die "PerlPress::DBAcc::rm_short: Specify shortcut id!\n";
-	
-	# Delete from table html_shortcuts
-	my $sth=$dbh->prepare("DELETE FROM html_shortcuts WHERE short_id=?");
-	$sth->execute($short_id) or die "Couldn't execute statement: ".$dbh->errstr;
+    # Get a reference to a hash containing the routine's arguments
+    my ($arg_ref)=@_;
+    
+    # Check if all necessary arguments are present
+    my $dbh=$arg_ref->{'dbh'} or croak "Specify database handler!\n";
+    my $short_id=$arg_ref->{'short_id'} or croak "Specify shortcut id!\n";
+    
+    # Delete from table html_shortcuts
+    my $sth=$dbh->prepare("DELETE FROM html_shortcuts WHERE short_id=?");
+    $sth->execute($short_id)
+        or croak "Couldn't execute statement: ".$dbh->errstr;
 }
 
 =head2 rm_art
@@ -1177,24 +1295,27 @@ Delete an article from the database.
 
 sub rm_art
 {
-	# Get a reference to a hash containing the routine's arguments
-	my ($arg_ref)=@_;
-  
-	# Check if all necessary arguments are present
-	my $dbh=$arg_ref->{'dbh'} or die "PerlPress::DBAcc::rm_art: Specify database handler!\n";
-	my $art_id=$arg_ref->{'art_id'} or die "PerlPress::DBAcc::rm_art: Specify article id!\n";
-	
-	# Delete from table articles
-	my $sth=$dbh->prepare("DELETE FROM articles WHERE art_id=?");
-	$sth->execute($art_id) or die "Couldn't execute statement: ".$dbh->errstr;
-	
-	# Delete from table art_cat
-	$sth=$dbh->prepare("DELETE FROM art_cat WHERE art_id=?");
-	$sth->execute($art_id) or die "Couldn't execute statement: ".$dbh->errstr;
-	
-	# Delete from table art_tag
-	$sth=$dbh->prepare("DELETE FROM art_tag WHERE art_id=?");
-	$sth->execute($art_id) or die "Couldn't execute statement: ".$dbh->errstr;
+    # Get a reference to a hash containing the routine's arguments
+    my ($arg_ref)=@_;
+    
+    # Check if all necessary arguments are present
+    my $dbh=$arg_ref->{'dbh'} or croak "Specify database handler!\n";
+    my $art_id=$arg_ref->{'art_id'} or croak "Specify article id!\n";
+    
+    # Delete from table articles
+    my $sth=$dbh->prepare("DELETE FROM articles WHERE art_id=?");
+    $sth->execute($art_id)
+        or croak "Couldn't execute statement: ".$dbh->errstr;
+    
+    # Delete from table art_cat
+    $sth=$dbh->prepare("DELETE FROM art_cat WHERE art_id=?");
+    $sth->execute($art_id)
+        or croak "Couldn't execute statement: ".$dbh->errstr;
+    
+    # Delete from table art_tag
+    $sth=$dbh->prepare("DELETE FROM art_tag WHERE art_id=?");
+    $sth->execute($art_id)
+        or croak "Couldn't execute statement: ".$dbh->errstr;
 }
 
 =head2 get_art_list_by_cat
@@ -1204,26 +1325,32 @@ sub rm_art
 
 sub get_art_list_by_cat
 {
-	# Get a reference to a hash containing the routine's arguments
-	my ($arg_ref)=@_;
-  
-	# Check if all necessary arguments are present
-	my $dbh=$arg_ref->{'dbh'} or die "PerlPress::DBAcc::get_art_list_by_cat: Specify database handler!\n";
-	my $cat_id=$arg_ref->{'cat_id'} or die "PerlPress::DBAcc::get_art_list_by_cat: Specify category id!\n";
-	
-	my $sth=$dbh->prepare("SELECT t1.art_id FROM articles AS t1 INNER JOIN
-		art_cat AS t2 ON t1.art_id = t2.art_id WHERE t2.cat_id
-		= ? AND (t1.type='blog' OR t1.type='page') AND t1.status='published'
-		ORDER BY t1.created DESC");
-	$sth->execute($cat_id) or die "Couldn't execute statement: ".$dbh->errstr;
-	
-	my @art_ids;
-	while (my $ret=$sth->fetchrow_hashref())
-	{
-		push @art_ids, $ret->{'art_id'};
-	}
-	
-	return \@art_ids
+    # Get a reference to a hash containing the routine's arguments
+    my ($arg_ref)=@_;
+    
+    # Check if all necessary arguments are present
+    my $dbh=$arg_ref->{'dbh'} or croak "Specify database handler!\n";
+    my $cat_id=$arg_ref->{'cat_id'} or croak "Specify category id!\n";
+    
+    my $sth=$dbh->prepare(
+        "SELECT t1.art_id FROM articles AS t1
+            INNER JOIN art_cat AS t2 ON t1.art_id = t2.art_id
+            WHERE
+                t2.cat_id = ? AND
+                (t1.type='blog' OR t1.type='page') AND
+                t1.status='published'
+        ORDER BY t1.created DESC"
+    );
+    $sth->execute($cat_id)
+        or croak "Couldn't execute statement: ".$dbh->errstr;
+    
+    my @art_ids;
+    while (my $ret=$sth->fetchrow_hashref())
+    {
+        push @art_ids, $ret->{'art_id'};
+    }
+    
+    return \@art_ids
 }
 
 =head2 get_art_list_by_tag
@@ -1233,26 +1360,32 @@ sub get_art_list_by_cat
 
 sub get_art_list_by_tag
 {
-	# Get a reference to a hash containing the routine's arguments
-	my ($arg_ref)=@_;
-  
-	# Check if all necessary arguments are present
-	my $dbh=$arg_ref->{'dbh'} or die "PerlPress::DBAcc::get_art_list_by_tag: Specify database handler!\n";
-	my $tag_id=$arg_ref->{'tag_id'} or die "PerlPress::DBAcc::get_art_list_by_tag: Specify tag id!\n";
-	
-	my $sth=$dbh->prepare("SELECT t1.art_id FROM articles AS t1 INNER JOIN
-		art_tag AS t2 ON t1.art_id = t2.art_id WHERE t2.tag_id
-		= ? AND (t1.type='blog' OR t1.type='page') AND t1.status='published'
-		ORDER BY t1.created DESC");
-	$sth->execute($tag_id) or die "Couldn't execute statement: ".$dbh->errstr;
-	
-	my @art_ids;
-	while (my $ret=$sth->fetchrow_hashref())
-	{
-		push @art_ids, $ret->{'art_id'};
-	}
-	
-	return \@art_ids
+    # Get a reference to a hash containing the routine's arguments
+    my ($arg_ref)=@_;
+    
+    # Check if all necessary arguments are present
+    my $dbh=$arg_ref->{'dbh'} or croak "Specify database handler!\n";
+    my $tag_id=$arg_ref->{'tag_id'} or croak "Specify tag id!\n";
+    
+    my $sth=$dbh->prepare(
+        "SELECT t1.art_id FROM articles AS t1
+            INNER JOIN art_tag AS t2 ON t1.art_id = t2.art_id
+            WHERE
+                t2.tag_id = ? AND
+                (t1.type='blog' OR t1.type='page') AND
+                t1.status='published'
+        ORDER BY t1.created DESC"
+    );
+    $sth->execute($tag_id)
+        or croak "Couldn't execute statement: ".$dbh->errstr;
+    
+    my @art_ids;
+    while (my $ret=$sth->fetchrow_hashref())
+    {
+        push @art_ids, $ret->{'art_id'};
+    }
+    
+    return \@art_ids
 }
 
 =head2 get_html_shortcuts
@@ -1263,16 +1396,17 @@ Get the HTML shortcut definitions from the database
 
 sub get_html_shortcuts
 {
-	# Get a reference to a hash containing the routine's arguments
-	my ($arg_ref)=@_;
-  
-	# Check if all necessary arguments are present
-	my $dbh=$arg_ref->{'dbh'} or die "PerlPress::DBAcc::get_html_shortcuts: Specify database handler!\n";
+    # Get a reference to a hash containing the routine's arguments
+    my ($arg_ref)=@_;
+    
+    # Check if all necessary arguments are present
+    my $dbh=$arg_ref->{'dbh'} or croak "Specify database handler!\n";
 
-	my $sth=$dbh->prepare("SELECT * FROM html_shortcuts");
-	$sth->execute() or die "Couldn't execute statement: ".$dbh->errstr;
-	
-	return $sth->fetchall_hashref("descr");
+    my $sth=$dbh->prepare("SELECT * FROM html_shortcuts");
+    $sth->execute()
+        or croak "Couldn't execute statement: ".$dbh->errstr;
+    
+    return $sth->fetchall_hashref("descr");
 }
 
 1;
