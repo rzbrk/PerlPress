@@ -71,13 +71,15 @@ sub status_db
 {
     # Get a reference to a hash containing the routine's arguments
     my ($arg_ref) = @_;
-  
+    
     # Check if all necessary arguments are present
     my $dbh = $arg_ref->{'dbh'} || undef;
-  
+    
+    # Get the status of the database connection
     my $status = 0;
     $status = 1 if ( $dbh->{'Active'} );
-  
+    #my $status = $dbh->ping;
+    
     return $status;
 }
 
@@ -90,27 +92,31 @@ navigation menu (type=page|nav).
 
 sub nav_entries
 {
-  # Get a reference to a hash containing the routine's arguments
-  my ($arg_ref)=@_;
+    # Get a reference to a hash containing the routine's arguments
+    my ($arg_ref)=@_;
   
-  # Check if all necessary arguments are present
-  my $dbh=$arg_ref->{'dbh'} or croak "Specify database handler!\n";
+    # Check if all necessary arguments are present
+    my $dbh=$arg_ref->{'dbh'} or croak "Specify database handler!\n";
 
-  my $sth = $dbh->prepare("SELECT art_id FROM articles
-    WHERE (status=\"published\" AND (type=\"page\" OR type=\"nav\"))");
-  $sth->execute() or croak "Couldn't execute statement: ".$dbh->errstr;
+    my $sth = $dbh->prepare(
+        "SELECT art_id FROM articles "
+        ."WHERE (status=\"published\" "
+        ."AND (type=\"page\" OR type=\"nav\"))"
+    );
+    $sth->execute()
+        or croak "Couldn't execute statement: ".$dbh->errstr;
 
-  my $nav_ids=$sth->fetchall_arrayref([0]);
-  
-  # $nav_ids is a array ref of array ref. Convert to array
-  my @nav_ids2;
-  foreach my $a (sort {$a <=> $b} @{$nav_ids})
-  {
-    push @nav_ids2, @{$a}[0];
-  }
-  
-  # Return the array ref
-  return \@nav_ids2;
+    my $nav_ids=$sth->fetchall_arrayref([0]);
+
+    # $nav_ids is a array ref of array ref. Convert to array
+    my @nav_ids2;
+    foreach my $a (sort {$a <=> $b} @{$nav_ids})
+    {
+        push @nav_ids2, @{$a}[0];
+    }
+
+    # Return the array ref
+    return \@nav_ids2;
 }
 
 =head2 get_publ_art
@@ -129,31 +135,37 @@ of articles can be specified. Default is to include articles of types
 
 sub get_publ_art
 {
-	# Get a reference to a hash containing the routine's arguments
-	my ($arg_ref)=@_;
+    # Get a reference to a hash containing the routine's arguments
+    my ($arg_ref)=@_;
 
-	# Check if all necessary arguments are present
-	my $dbh=$arg_ref->{'dbh'} or croak "Specify database handler!\n";
-	my $page_only=$arg_ref->{'page_only'} || 0;
-	my $blog_only=$arg_ref->{'blog_only'} || 0;
+    # Check if all necessary arguments are present
+    my $dbh=$arg_ref->{'dbh'} or croak "Specify database handler!\n";
+    my $page_only=$arg_ref->{'page_only'} || 0;
+    my $blog_only=$arg_ref->{'blog_only'} || 0;
 
-	my $type="(type=\"page\" OR type=\"blog\")";
+    my $type="(type=\"page\" OR type=\"blog\")";
 
-	if($page_only!=0 && $blog_only==0) { $type="type=\"page\""; }
-	if($page_only==0 && $blog_only!=0) { $type="type=\"blog\""; }
+    if($page_only!=0 && $blog_only==0) { $type="type=\"page\""; }
+    if($page_only==0 && $blog_only!=0) { $type="type=\"blog\""; }
 	
-	my $sth = $dbh->prepare("SELECT art_id, created FROM articles
-	WHERE (status=\"published\" AND ".$type.") ORDER BY created DESC");
-	$sth->execute() or croak "Couldn't execute statement: ".$dbh->errstr;
+    my $sth = $dbh->prepare(
+        "SELECT art_id FROM articles WHERE "
+        ."(status=\"published\" AND ".$type.") "
+        ."ORDER BY created DESC"
+    );
+    $sth->execute()
+        or croak "Couldn't execute statement: ".$dbh->errstr;
 
-	# Loop over the results and get the article ids
-	my @art_ids;
-	while (my $ret=$sth->fetchrow_hashref())
-	{
-		push @art_ids, $ret->{'art_id'};
-	}
-	
-	return \@art_ids
+    my $art_ids = $sth->fetchall_arrayref([0]);
+    
+    # $art_ids is a array ref of array ref. Convert to array
+    my @art_ids2;
+    foreach my $a (@{$art_ids})
+    {
+        push @art_ids2, @{$a}[0];
+    }
+
+    return \@art_ids2;    
 }
 
 =head2 get_cat_list
@@ -944,14 +956,15 @@ sub get_cat_alias
   
     # Check if all necessary arguments are present
     my $dbh=$arg_ref->{'dbh'} or croak "Specify database handler!\n";
-    my $cat_id=$arg_ref->{'cat_id'} or craok "Specify cat id!\n";
+    my $cat_id=$arg_ref->{'cat_id'} or croak "Specify cat id!\n";
     
     my @cat_alias;
     my $sth;
     foreach my $id (@{$cat_id})
     {
         $sth = $dbh->prepare(
-            "SELECT alias FROM categories WHERE (cat_id=?)");
+            "SELECT alias FROM categories WHERE (cat_id=?)"
+        );
         $sth->execute($id)
             or croak "Couldn't execute statement: ".$dbh->errstr;
         my $alias=$sth->fetchrow_hashref();
@@ -973,7 +986,7 @@ sub get_tag_alias
   
     # Check if all necessary arguments are present
     my $dbh=$arg_ref->{'dbh'} or croak "Specify database handler!\n";
-    my $tag_id=$arg_ref->{'tag_id'} or craok "Specify cat id!\n";
+    my $tag_id=$arg_ref->{'tag_id'} or croak "Specify cat id!\n";
     
     my @tag_alias;
     my $sth;
