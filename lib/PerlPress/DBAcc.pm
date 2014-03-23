@@ -395,13 +395,13 @@ sub load_art_data
   my $dbh=$arg_ref->{'dbh'} or croak "Specify database handler!\n";
   my $art_id=$arg_ref->{'art_id'} or croak "Specify article id!\n";
   
-  # Load the article data from table `articles` and `art_persist`
+  # Load the article data from table `articles`
   my $sth = $dbh->prepare("SELECT * FROM articles WHERE (art_id=?)");
   $sth->execute($art_id)
     or croak "Couldn't execute statement: ".$dbh->errstr;
   
   my $art=$sth->fetchrow_hashref();
-  
+
   return $art;
 }
 

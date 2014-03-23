@@ -90,7 +90,7 @@ sub nav_menu
             art_id=>$art_id
          });
         
-        if ($art->{type} = ~m/nav/i)
+        if ($art->{type} =~ m/nav/i)
         {
             push @menu, {
                 NAV_NAME => $art->{'title'},
@@ -226,8 +226,8 @@ sub html_art
 	
     foreach my $s (@html_shortcuts)
     {
-        $art->{'intr_text'} = ~s/$s->{'find'}/$s->{'repl'}->()/eg;
-        $art->{'full_text'} = ~s/$s->{'find'}/$s->{'repl'}->()/eg;
+        $art->{'intr_text'} =~ s/$s->{'find'}/$s->{'repl'}->()/eg;
+        $art->{'full_text'} =~ s/$s->{'find'}/$s->{'repl'}->()/eg;
     }
 
     # Open the html template file
@@ -478,7 +478,7 @@ sub html_list
 
 			foreach my $s (@html_shortcuts)
             {
-                $art->{'intr_text'} = ~s/$s->{'find'}/$s->{'repl'}->()/eg;
+                $art->{'intr_text'} =~ s/$s->{'find'}/$s->{'repl'}->()/eg;
             }
 			
             # If article has full_text then set appropriate template
