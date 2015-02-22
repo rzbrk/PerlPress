@@ -563,8 +563,8 @@ sub html_list
         $html->param(
             CHARSET         => "utf-8",
             META_AUTHOR     => $ENV{'AUTHOR'},
-            META_DESCR      => "",
-            META_KEYWORDS   => "",
+            META_DESCR      => "Jan Grossers Blog",
+            META_KEYWORDS   => "Jan Grosser, Blog, Personal Website",
             META_DATE       => PerlPress::Tools::epoch2date_str({
                                    date=>time,
                                    tz_offset=>1,
